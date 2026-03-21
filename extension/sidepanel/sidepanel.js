@@ -249,11 +249,20 @@
 
   // ─── Listen for Messages from background/content ──────────────
 
+  let sessionStartTime = null;
+  let sessionUpdateInterval = null;
+
   chrome.runtime.onMessage.addListener((message) => {
     switch (message.type) {
       case 'POSTURE_SCORE_UPDATE':
         if (els.scoreDisplay) {
           els.scoreDisplay.textContent = message.score;
+          if (els.scoreSection) els.scoreSection.style.display = '';
+        }
+        // Start session timer if not already running
+        if (!sessionStartTime) {
+          sessionStartTime = Date.now();
+          startSessionTimer();
         }
         break;
       case 'POSTURE_STATUS_UPDATE':
@@ -261,6 +270,30 @@
         break;
     }
   });
+
+  // Update session stats every 5 seconds
+  function startSessionTimer() {
+    if (sessionUpdateInterval) return;
+    sessionUpdateInterval = setInterval(async () => {
+      try {
+        const state = await chrome.runtime.sendMessage({ type: 'GET_CURRENT_STATE' });
+        if (state && state.ok && state.session) {
+          if (els.sessionSection) els.sessionSection.style.display = '';
+          if (els.sessionDuration) {
+            els.sessionDuration.textContent = Math.floor(state.session.duration / 60) + 'm';
+          }
+          if (els.sessionAvg) {
+            els.sessionAvg.textContent = state.session.metrics.avgPostureScore || '--';
+          }
+          if (els.sessionAlerts) {
+            els.sessionAlerts.textContent = state.session.metrics.alertCount || 0;
+          }
+        }
+      } catch (_e) {
+        // Background not available
+      }
+    }, 5000);
+  }
 
   // ─── Lock controls on non-owner tabs ─────────────────────────
 
@@ -286,11 +319,18 @@
 
   async function restoreState() {
     try {
+      // Get the active tab ID so we can check if WE are the owner
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const myTabId = activeTab ? activeTab.id : null;
+
       const state = await chrome.runtime.sendMessage({ type: 'GET_CURRENT_STATE' });
       if (!state || !state.ok) return;
 
+      // Check ownership: are we the owner tab?
+      const isOwner = !state.ownerTabId || state.ownerTabId === myTabId;
+
       // If monitoring is running on ANOTHER tab, lock this panel
-      if (state.isRunning && !state.isOwner) {
+      if (state.isRunning && !isOwner) {
         lockControls('Monitoring active on another tab');
 
         // Still show the live score (read-only)
@@ -313,7 +353,7 @@
         return;
       }
 
-      // This IS the owner tab (or no owner yet) — full controls
+      // This IS the owner tab (or no owner yet) — full controls available
 
       // Restore score display
       if (state.lastScore !== null && els.scoreDisplay) {
