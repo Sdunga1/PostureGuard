@@ -386,6 +386,49 @@
         return;
       }
 
+      // Session just completed — show report prompt
+      if (state.sessionComplete) {
+        if (els.postureToggle) els.postureToggle.checked = false;
+        updateStatusUI('disabled');
+        if (els.statusText) {
+          els.statusText.textContent = 'Session complete (2 min)';
+        }
+
+        // Show final session stats
+        if (state.session && els.sessionSection) {
+          els.sessionSection.style.display = '';
+          if (els.sessionDuration) {
+            els.sessionDuration.textContent = Math.floor(state.session.duration / 60) + 'm';
+          }
+          if (els.sessionAvg) {
+            els.sessionAvg.textContent = state.session.metrics.avgPostureScore || '--';
+          }
+          if (els.sessionAlerts) {
+            els.sessionAlerts.textContent = state.session.metrics.alertCount || 0;
+          }
+        }
+        if (state.lastScore !== null && els.scoreDisplay) {
+          els.scoreDisplay.textContent = state.lastScore;
+          if (els.scoreSection) els.scoreSection.style.display = '';
+        }
+
+        // Highlight report button
+        if (els.reportBtn) {
+          els.reportBtn.style.background = '#5b21b6';
+          els.reportBtn.style.color = '#fff';
+          els.reportBtn.style.fontWeight = '600';
+          els.reportBtn.textContent = 'Generate Report \u2192';
+          els.reportBtn.disabled = false;
+        }
+
+        // Restore calibration badge
+        if (state.hasCalibration && els.calStatus) {
+          els.calStatus.textContent = 'Calibrated';
+          els.calStatus.classList.add('calibrated');
+        }
+        return;
+      }
+
       // This IS the owner tab (or no owner yet) — full controls available
 
       // Restore score display

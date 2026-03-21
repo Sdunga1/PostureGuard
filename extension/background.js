@@ -240,27 +240,34 @@ function processFrame(landmarks, ts, tabId) {
     if (elapsed >= SESSION_DURATION_MS) {
       console.log('[PostureGuard BG] Session time limit reached (' + Math.round(elapsed / 1000) + 's)');
 
-      // Notify owner tab to stop camera
-      if (ownerTabId) {
-        chrome.tabs.sendMessage(ownerTabId, {
-          type: 'POSTURE_ENABLED_CHANGED',
-          enabled: false
-        }).catch(() => {});
-      }
+      const finalSession = getSessionData();
 
-      // Notify all extension pages (side panel) that session ended
+      // Save session-ended state to storage so side panel can detect it
+      chrome.storage.local.set({
+        postureEnabled: false,
+        sessionComplete: true,
+        lastSession: finalSession
+      });
+      settings.postureEnabled = false;
+
+      // Notify all extension pages (side panel) FIRST
       chrome.runtime.sendMessage({
         type: 'SESSION_ENDED',
-        session: getSessionData()
+        session: finalSession
       }).catch(() => {});
 
-      // Disable monitoring
-      settings.postureEnabled = false;
-      chrome.storage.local.set({ postureEnabled: false });
+      // Stop camera on owner tab AFTER side panel gets the message
+      setTimeout(() => {
+        if (ownerTabId) {
+          chrome.tabs.sendMessage(ownerTabId, {
+            type: 'POSTURE_ENABLED_CHANGED',
+            enabled: false
+          }).catch(() => {});
+        }
+        ownerTabId = null;
+        activeTabId = null;
+      }, 500);
 
-      // Release ownership but keep session data for report
-      ownerTabId = null;
-      activeTabId = null;
       return;
     }
   }
@@ -399,6 +406,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         ownerTabId: ownerTabId,
         senderTabId: sender.tab?.id || null,
         isOwner: sender.tab?.id === ownerTabId,
+        sessionComplete: session.scores.length > 0 && !ownerTabId && !settings.postureEnabled,
         lastScore: session.scores.length > 0
           ? session.scores[session.scores.length - 1]
           : null,
