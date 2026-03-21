@@ -116,9 +116,23 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 let ownerTabId = null;    // The ONE tab that owns the camera + session
 let focusedTabId = null;  // Currently visible tab (for nudge delivery)
 
-// Track focused tab for nudge delivery
+// Track focused tab for nudge delivery + auto-close side panel on non-owner tabs
 chrome.tabs.onActivated.addListener((activeInfo) => {
   focusedTabId = activeInfo.tabId;
+
+  // If monitoring is active, disable side panel on non-owner tabs
+  if (ownerTabId && activeInfo.tabId !== ownerTabId) {
+    chrome.sidePanel.setOptions({
+      tabId: activeInfo.tabId,
+      enabled: false
+    }).catch(() => {});
+  } else if (ownerTabId && activeInfo.tabId === ownerTabId) {
+    // Re-enable on owner tab
+    chrome.sidePanel.setOptions({
+      tabId: activeInfo.tabId,
+      enabled: true
+    }).catch(() => {});
+  }
 });
 
 chrome.windows.onFocusChanged.addListener(async (windowId) => {
