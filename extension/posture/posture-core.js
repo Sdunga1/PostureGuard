@@ -160,6 +160,7 @@
   }
 
   function startDetectionLoop() {
+    if (!video) return;
     if (typeof video.requestVideoFrameCallback === 'function') {
       const onFrame = async () => {
         await processFrame();
