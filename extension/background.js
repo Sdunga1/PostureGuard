@@ -348,7 +348,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({
         ok: true,
         postureEnabled: settings.postureEnabled,
-        isRunning: cameraTabId !== null,
+        isRunning: cameraTabId !== null || session.scores.length > 0,
         hasCalibration: calibration !== null,
         lastScore: session.scores.length > 0
           ? session.scores[session.scores.length - 1]

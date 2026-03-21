@@ -64,7 +64,11 @@
       els.apiKeyInput.value = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
     }
 
-    updateStatusUI(settings.postureEnabled ? 'loading' : 'disabled');
+    // Don't set status here — restoreState() will set the correct status
+    // after checking with background
+    if (!settings.postureEnabled) {
+      updateStatusUI('disabled');
+    }
   }
 
   async function saveSetting(key, value) {
@@ -280,17 +284,22 @@
         }
       }
 
-      // Restore monitoring status
-      if (state.isRunning) {
-        updateStatusUI('live');
-      } else if (state.postureEnabled) {
-        updateStatusUI('loading');
-      }
-
       // Restore calibration badge
       if (state.hasCalibration && els.calStatus) {
         els.calStatus.textContent = 'Calibrated';
         els.calStatus.classList.add('calibrated');
+      }
+
+      // Restore monitoring status
+      if (state.isRunning) {
+        // Camera is running (on this or another tab) — show live
+        updateStatusUI('live');
+      } else if (state.postureEnabled && state.hasCalibration) {
+        // Enabled + calibrated but camera not started yet
+        updateStatusUI('live');
+      } else if (state.postureEnabled) {
+        // Enabled but not calibrated
+        updateStatusUI('ready');
       }
     } catch (_e) {
       // Background not ready yet
