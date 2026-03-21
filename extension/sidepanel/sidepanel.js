@@ -268,6 +268,39 @@
       case 'POSTURE_STATUS_UPDATE':
         updateStatusUI(message.phase);
         break;
+      case 'SESSION_ENDED':
+        // Session time limit reached — prompt for report
+        updateStatusUI('disabled');
+        if (els.postureToggle) els.postureToggle.checked = false;
+        if (els.statusText) {
+          els.statusText.textContent = 'Session complete (2 min)';
+        }
+        // Stop the session timer
+        if (sessionUpdateInterval) {
+          clearInterval(sessionUpdateInterval);
+          sessionUpdateInterval = null;
+        }
+        // Update final session stats
+        if (message.session) {
+          if (els.sessionDuration) {
+            els.sessionDuration.textContent = Math.floor(message.session.duration / 60) + 'm';
+          }
+          if (els.sessionAvg) {
+            els.sessionAvg.textContent = message.session.metrics.avgPostureScore || '--';
+          }
+          if (els.sessionAlerts) {
+            els.sessionAlerts.textContent = message.session.metrics.alertCount || 0;
+          }
+        }
+        // Highlight the Generate Report button
+        if (els.reportBtn) {
+          els.reportBtn.style.background = '#5b21b6';
+          els.reportBtn.style.color = '#fff';
+          els.reportBtn.style.fontWeight = '600';
+          els.reportBtn.textContent = 'Generate Report \u2192';
+          els.reportBtn.disabled = false;
+        }
+        break;
     }
   });
 

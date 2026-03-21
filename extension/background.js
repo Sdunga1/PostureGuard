@@ -20,6 +20,7 @@ const settings = {
 
 const SCORE_BROADCAST_INTERVAL_MS = 1000;
 const ROLLING_WINDOW_MS = 30000;
+const SESSION_DURATION_MS = 2 * 60 * 1000; // 2 minutes per session (demo mode)
 
 // Landmark indices (Human.js / MediaPipe Face Mesh)
 const NOSE_TIP = 1;
@@ -231,6 +232,37 @@ function processFrame(landmarks, ts, tabId) {
         console.log('[PostureGuard BG] Calibration reloaded from storage');
       }
     });
+  }
+
+  // Check if session time limit reached
+  if (session.startTime) {
+    const elapsed = Date.now() - session.startTime;
+    if (elapsed >= SESSION_DURATION_MS) {
+      console.log('[PostureGuard BG] Session time limit reached (' + Math.round(elapsed / 1000) + 's)');
+
+      // Notify owner tab to stop camera
+      if (ownerTabId) {
+        chrome.tabs.sendMessage(ownerTabId, {
+          type: 'POSTURE_ENABLED_CHANGED',
+          enabled: false
+        }).catch(() => {});
+      }
+
+      // Notify all extension pages (side panel) that session ended
+      chrome.runtime.sendMessage({
+        type: 'SESSION_ENDED',
+        session: getSessionData()
+      }).catch(() => {});
+
+      // Disable monitoring
+      settings.postureEnabled = false;
+      chrome.storage.local.set({ postureEnabled: false });
+
+      // Release ownership but keep session data for report
+      ownerTabId = null;
+      activeTabId = null;
+      return;
+    }
   }
 
   const metrics = calculateMetrics(landmarks, ts);
