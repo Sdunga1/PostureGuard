@@ -30,7 +30,7 @@
 
   // ─── Settings ─────────────────────────────────────────────────
 
-  let settings = {
+  const settings = {
     postureEnabled: false,
     alertThresholdMs: 30000,
     debugMode: false,

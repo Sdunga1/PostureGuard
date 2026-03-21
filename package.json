@@ -1,0 +1,29 @@
+{
+  "name": "postureguard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Chrome extension for real-time posture detection and coaching via Claude API",
+  "scripts": {
+    "lint": "eslint extension/",
+    "lint:fix": "eslint extension/ --fix",
+    "validate:manifest": "node scripts/validate-manifest.js",
+    "check:syntax": "node scripts/check-syntax.js",
+    "check:all": "npm run validate:manifest && npm run check:syntax && npm run lint",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-standard": "^17.1.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3"
+  },
+  "lint-staged": {
+    "extension/**/*.js": [
+      "eslint --fix",
+      "node scripts/check-syntax.js"
+    ],
+    "extension/manifest.json": [
+      "node scripts/validate-manifest.js"
+    ]
+  }
+}

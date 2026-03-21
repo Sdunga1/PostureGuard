@@ -8,7 +8,7 @@ const CLAUDE_MODEL = 'claude-sonnet-4-5-20241022';
 const ANTHROPIC_VERSION = '2023-06-01';
 
 // Settings cache (synced via chrome.storage)
-let settings = {
+const settings = {
   postureEnabled: false,
   alertThresholdMs: 30000,
   apiKey: ''
