@@ -134,11 +134,18 @@
   }
 
   function connectCameraToPreview() {
-    // Get the existing video stream from PostureCore
-    const existingVideo = document.querySelector('video[autoplay][muted]');
-    if (existingVideo && existingVideo.srcObject && videoEl) {
-      videoEl.srcObject = existingVideo.srcObject;
+    if (!videoEl) return;
+
+    // Get the camera stream from PostureCore
+    if (window.PostureCore && window.PostureCore.getStream()) {
+      videoEl.srcObject = window.PostureCore.getStream();
       videoEl.play().catch(() => {});
+      console.log('[PostureGuard] Calibration: connected to camera stream');
+    } else {
+      console.warn('[PostureGuard] Calibration: no camera stream available');
+      if (instructionEl) {
+        instructionEl.textContent = 'Enable monitoring first, then calibrate.';
+      }
     }
   }
 

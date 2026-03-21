@@ -74,29 +74,27 @@
 
   // ─── Send message to content script safely ──────────────────
 
-  async function sendToActiveTab(message) {
+  async function sendToActiveTab(message, silent) {
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab || !tab.id) {
-        console.warn('[PostureGuard] No active tab found');
-        return null;
-      }
+      if (!tab || !tab.id) return null;
+
       // Skip chrome://, edge://, about: pages where content scripts can't run
       if (tab.url && (tab.url.startsWith('chrome://') ||
                       tab.url.startsWith('edge://') ||
                       tab.url.startsWith('about:') ||
                       tab.url.startsWith('chrome-extension://'))) {
-        console.warn('[PostureGuard] Cannot inject into:', tab.url);
-        updateStatusUI('error');
-        if (els.statusText) {
-          els.statusText.textContent = 'Open a webpage first';
+        if (!silent) {
+          updateStatusUI('error');
+          if (els.statusText) {
+            els.statusText.textContent = 'Open a webpage first';
+          }
         }
         return null;
       }
       return await chrome.tabs.sendMessage(tab.id, message);
-    } catch (err) {
-      console.warn('[PostureGuard] Tab message failed:', err.message);
-      // Content script may not be injected yet — try injecting it
+    } catch (_err) {
+      // Content script not injected on this tab — silently ignore
       return null;
     }
   }

@@ -290,7 +290,13 @@
   });
 
   // Expose for other modules
-  window.PostureCore = { start, stop, getPhase: () => phase, togglePreview };
+  window.PostureCore = {
+    start,
+    stop,
+    getPhase: () => phase,
+    getStream: () => stream,
+    togglePreview
+  };
 
   console.log('[PostureGuard] Posture core loaded');
 })();
