@@ -192,32 +192,65 @@ function calculateMetrics(landmarks, ts) {
   return { forwardTilt, lateralTilt, faceSize, screenDistance, ts };
 }
 
+let scoreLogCounter = 0;
+
 function computeScore(metrics) {
   if (!calibration) return 100;
 
+  // Forward head tilt deviation (more sensitive multiplier)
+  const forwardDev = Math.abs(metrics.forwardTilt - calibration.forwardTilt);
   const forwardScore = Math.min(100,
-    Math.abs(metrics.forwardTilt - calibration.forwardTilt) /
-    Math.abs(calibration.forwardTilt || 1) * 100 * 2
+    forwardDev / Math.max(Math.abs(calibration.forwardTilt), 0.01) * 150
   );
-  const lateralScore = Math.min(100,
-    Math.abs(metrics.lateralTilt - calibration.lateralTilt) * 10
-  );
+
+  // Lateral tilt deviation (degrees — even small tilt should register)
+  const lateralDev = Math.abs(metrics.lateralTilt - calibration.lateralTilt);
+  const lateralScore = Math.min(100, lateralDev * 15);
+
+  // Slouch (face size change = distance change)
+  const slouchDev = Math.abs(metrics.faceSize - calibration.faceSize);
   const slouchScore = Math.min(100,
-    Math.abs(metrics.faceSize - calibration.faceSize) /
-    Math.abs(calibration.faceSize || 1) * 100 * 2
+    slouchDev / Math.max(Math.abs(calibration.faceSize), 0.01) * 150
   );
-  const distanceScore = metrics.screenDistance < calibration.screenDistance * 0.7
-    ? Math.min(100, (1 - metrics.screenDistance / calibration.screenDistance) * 200)
+
+  // Screen distance (too close)
+  const distRatio = metrics.screenDistance / Math.max(calibration.screenDistance, 0.01);
+  const distanceScore = distRatio < 0.75
+    ? Math.min(100, (1 - distRatio) * 250)
     : 0;
 
+  // Weighted average (higher = worse posture)
   const raw = (forwardScore * 0.35) + (lateralScore * 0.2) +
               (slouchScore * 0.3) + (distanceScore * 0.15);
 
-  return Math.max(0, Math.min(100, Math.round(100 - raw)));
+  const score = Math.max(0, Math.min(100, Math.round(100 - raw)));
+
+  // Log periodically for debugging
+  scoreLogCounter++;
+  if (scoreLogCounter % 60 === 1) {
+    console.log('[PostureGuard BG] Score:', score,
+      '| fwd:', forwardScore.toFixed(1),
+      '| lat:', lateralScore.toFixed(1),
+      '| slouch:', slouchScore.toFixed(1),
+      '| dist:', distanceScore.toFixed(1),
+      '| raw:', raw.toFixed(1));
+  }
+
+  return score;
 }
 
 function processFrame(landmarks, ts, tabId) {
   if (!session.startTime) session.startTime = Date.now();
+
+  // Ensure calibration is loaded (service worker may have restarted)
+  if (!calibration) {
+    chrome.storage.local.get(['postureCalV1'], (result) => {
+      if (result.postureCalV1) {
+        calibration = result.postureCalV1;
+        console.log('[PostureGuard BG] Calibration reloaded from storage');
+      }
+    });
+  }
 
   const metrics = calculateMetrics(landmarks, ts);
   if (!metrics) return;
