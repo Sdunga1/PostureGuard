@@ -349,6 +349,24 @@ body {
   height: 4px;
 }
 
+.setting-row select {
+  flex: 1;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-surface-border);
+  color: var(--color-text);
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+}
+
+.setting-row select:focus {
+  outline: none;
+  border-color: rgba(76, 215, 246, 0.4);
+  box-shadow: 0 0 0 3px rgba(76, 215, 246, 0.1);
+}
+
 .setting-value {
   font-size: 12px;
   font-weight: 600;

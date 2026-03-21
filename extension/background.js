@@ -20,7 +20,7 @@ const settings = {
 
 const SCORE_BROADCAST_INTERVAL_MS = 1000;
 const ROLLING_WINDOW_MS = 30000;
-const SESSION_DURATION_MS = 1 * 60 * 1000; // 1 minute per session (dev/testing mode)
+let sessionDurationMs = 5 * 60 * 1000; // Default 5 minutes
 
 // Landmark indices (Human.js / MediaPipe Face Mesh)
 // Face mesh landmark indices (Human.js / MediaPipe)
@@ -101,9 +101,10 @@ chrome.action.onClicked.addListener((tab) => {
 
 async function loadSettings() {
   const stored = await chrome.storage.local.get([
-    'postureEnabled', 'alertThresholdMs', 'apiKey'
+    'postureEnabled', 'alertThresholdMs', 'apiKey', 'sessionDurationMs'
   ]);
   Object.assign(settings, stored);
+  if (stored.sessionDurationMs != null) sessionDurationMs = stored.sessionDurationMs;
 }
 
 async function loadCalibration() {
@@ -123,6 +124,10 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     if (key === 'postureCalV1') {
       calibration = newValue;
       console.log('[PostureGuard BG] Calibration updated');
+    }
+    if (key === 'sessionDurationMs') {
+      sessionDurationMs = newValue;
+      console.log('[PostureGuard BG] Session duration updated:', newValue);
     }
     // Reset session when monitoring is re-enabled
     if (key === 'postureEnabled' && newValue === true) {
@@ -351,7 +356,7 @@ function processFrame(landmarks, bodyKeypoints, ts, tabId) {
   // Check if session time limit reached
   if (session.startTime) {
     const elapsed = Date.now() - session.startTime;
-    if (elapsed >= SESSION_DURATION_MS) {
+    if (sessionDurationMs > 0 && elapsed >= sessionDurationMs) {
       sessionEnding = true; // Prevent re-entry
       console.log('[PostureGuard BG] Session time limit reached (' + Math.round(elapsed / 1000) + 's)');
 

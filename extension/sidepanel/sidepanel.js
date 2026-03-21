@@ -16,6 +16,7 @@
     calStatus: document.getElementById('cal-status'),
     thresholdSlider: document.getElementById('threshold-slider'),
     thresholdValue: document.getElementById('threshold-value'),
+    durationSelect: document.getElementById('duration-select'),
     debugToggle: document.getElementById('debug-toggle'),
     sessionSection: document.getElementById('session-section'),
     sessionDuration: document.getElementById('session-duration'),
@@ -213,6 +214,10 @@
     if (els.thresholdSlider) {
       els.thresholdSlider.value = (settings.alertThresholdMs || 5000) / 1000;
       els.thresholdValue.textContent = els.thresholdSlider.value + 's';
+    }
+    if (els.durationSelect) {
+      const durationVal = stored.sessionDurationMs != null ? stored.sessionDurationMs : 300000;
+      els.durationSelect.value = durationVal;
     }
     if (els.debugToggle) {
       els.debugToggle.checked = settings.debugMode || false;
@@ -424,6 +429,12 @@
       const seconds = parseInt(e.target.value, 10);
       els.thresholdValue.textContent = seconds + 's';
       saveSetting('alertThresholdMs', seconds * 1000);
+    });
+  }
+
+  if (els.durationSelect) {
+    els.durationSelect.addEventListener('change', (e) => {
+      saveSetting('sessionDurationMs', parseInt(e.target.value, 10));
     });
   }
 

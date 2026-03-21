@@ -984,6 +984,7 @@ export default function App() {
   const [sessionReport, setSessionReport] = useState(null)
   const [sessionError, setSessionError] = useState(null)
   const [pendingSessionId, setPendingSessionId] = useState(null)
+  const [workoutSaved, setWorkoutSaved] = useState(false)
   const supabaseRef = useRef(null)
 
   // ── Adaptive Exercises ──
@@ -1116,6 +1117,39 @@ export default function App() {
 
     return () => clearInterval(interval)
   }, [screen])
+
+  // ── Save workout completion to Supabase ──
+  useEffect(() => {
+    if (screen !== 'complete') return
+    if (workoutSaved) return
+    if (!sessionReport?.id) return
+
+    const saveWorkout = async () => {
+      try {
+        const supabase = supabaseRef.current
+        const { data: { session: authSession } } = await supabase.auth.getSession()
+        if (!authSession) return
+
+        const response = await fetch(`/api/sessions/${sessionReport.id}/workout`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${authSession.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            exercises: exercises.map(e => ({ id: e.id, name: e.name, duration: e.duration })),
+            activeTimeMinutes: Math.round((Date.now() - sessionStartTime) / 60000),
+            completedAt: new Date().toISOString()
+          })
+        })
+        if (response.ok) setWorkoutSaved(true)
+      } catch (err) {
+        console.warn('Failed to save workout:', err)
+      }
+    }
+
+    saveWorkout()
+  }, [screen, workoutSaved, sessionReport, exercises, sessionStartTime])
 
   // ── Handlers ──
   const handleStart = useCallback(() => {
