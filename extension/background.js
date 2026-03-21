@@ -177,7 +177,7 @@ function calculateMetrics(landmarks, ts) {
 let scoreLogCounter = 0;
 
 function computeScore(metrics) {
-  if (!calibration) return 100;
+  if (!calibration) return null; // No score without calibration
 
   // Forward head tilt deviation (more sensitive multiplier)
   const forwardDev = Math.abs(metrics.forwardTilt - calibration.forwardTilt);
@@ -281,6 +281,8 @@ function processFrame(landmarks, ts, tabId) {
   recentFrames = recentFrames.filter(f => f.ts > cutoff);
 
   const score = computeScore(metrics);
+  if (score === null) return; // No calibration yet — don't score or broadcast
+
   session.scores.push(score);
 
   // Alert logic
