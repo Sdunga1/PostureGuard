@@ -30,6 +30,8 @@
 
   // ─── Settings ─────────────────────────────────────────────────
 
+  let sessionEnded = false; // Flag to prevent UI reset after session completes
+
   const settings = {
     postureEnabled: false,
     alertThresholdMs: 5000,
@@ -64,9 +66,8 @@
       els.apiKeyInput.value = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
     }
 
-    // Don't set status here — restoreState() will set the correct status
-    // after checking with background
-    if (!settings.postureEnabled) {
+    // Don't reset UI if session just ended — let the session-complete screen stay
+    if (!settings.postureEnabled && !sessionEnded) {
       updateStatusUI('disabled');
     }
   }
@@ -247,6 +248,55 @@
     }
   });
 
+  // ─── Session Complete UI ──────────────────────────────────────
+
+  function showSessionCompleteUI(sessionData) {
+    sessionEnded = true;
+
+    // Stop session timer
+    if (sessionUpdateInterval) {
+      clearInterval(sessionUpdateInterval);
+      sessionUpdateInterval = null;
+    }
+
+    // Update status
+    if (els.statusDot) {
+      els.statusDot.className = 'status-dot';
+      els.statusDot.classList.add('off');
+    }
+    if (els.statusText) {
+      els.statusText.textContent = 'Session complete (2 min)';
+    }
+    if (els.postureToggle) els.postureToggle.checked = false;
+
+    // Show final session stats
+    if (sessionData) {
+      if (els.scoreDisplay) {
+        els.scoreDisplay.textContent = sessionData.metrics.avgPostureScore || '--';
+      }
+      if (els.scoreSection) els.scoreSection.style.display = '';
+      if (els.sessionSection) els.sessionSection.style.display = '';
+      if (els.sessionDuration) {
+        els.sessionDuration.textContent = Math.floor(sessionData.duration / 60) + 'm';
+      }
+      if (els.sessionAvg) {
+        els.sessionAvg.textContent = sessionData.metrics.avgPostureScore || '--';
+      }
+      if (els.sessionAlerts) {
+        els.sessionAlerts.textContent = sessionData.metrics.alertCount || 0;
+      }
+    }
+
+    // Highlight report button
+    if (els.reportBtn) {
+      els.reportBtn.style.background = '#5b21b6';
+      els.reportBtn.style.color = '#fff';
+      els.reportBtn.style.fontWeight = '600';
+      els.reportBtn.textContent = 'Generate Report \u2192';
+      els.reportBtn.disabled = false;
+    }
+  }
+
   // ─── Listen for Messages from background/content ──────────────
 
   let sessionStartTime = null;
@@ -266,40 +316,12 @@
         }
         break;
       case 'POSTURE_STATUS_UPDATE':
-        updateStatusUI(message.phase);
+        if (!sessionEnded) {
+          updateStatusUI(message.phase);
+        }
         break;
       case 'SESSION_ENDED':
-        // Session time limit reached — prompt for report
-        updateStatusUI('disabled');
-        if (els.postureToggle) els.postureToggle.checked = false;
-        if (els.statusText) {
-          els.statusText.textContent = 'Session complete (2 min)';
-        }
-        // Stop the session timer
-        if (sessionUpdateInterval) {
-          clearInterval(sessionUpdateInterval);
-          sessionUpdateInterval = null;
-        }
-        // Update final session stats
-        if (message.session) {
-          if (els.sessionDuration) {
-            els.sessionDuration.textContent = Math.floor(message.session.duration / 60) + 'm';
-          }
-          if (els.sessionAvg) {
-            els.sessionAvg.textContent = message.session.metrics.avgPostureScore || '--';
-          }
-          if (els.sessionAlerts) {
-            els.sessionAlerts.textContent = message.session.metrics.alertCount || 0;
-          }
-        }
-        // Highlight the Generate Report button
-        if (els.reportBtn) {
-          els.reportBtn.style.background = '#5b21b6';
-          els.reportBtn.style.color = '#fff';
-          els.reportBtn.style.fontWeight = '600';
-          els.reportBtn.textContent = 'Generate Report \u2192';
-          els.reportBtn.disabled = false;
-        }
+        showSessionCompleteUI(message.session);
         break;
     }
   });
@@ -388,40 +410,7 @@
 
       // Session just completed — show report prompt
       if (state.sessionComplete) {
-        if (els.postureToggle) els.postureToggle.checked = false;
-        updateStatusUI('disabled');
-        if (els.statusText) {
-          els.statusText.textContent = 'Session complete (2 min)';
-        }
-
-        // Show final session stats
-        if (state.session && els.sessionSection) {
-          els.sessionSection.style.display = '';
-          if (els.sessionDuration) {
-            els.sessionDuration.textContent = Math.floor(state.session.duration / 60) + 'm';
-          }
-          if (els.sessionAvg) {
-            els.sessionAvg.textContent = state.session.metrics.avgPostureScore || '--';
-          }
-          if (els.sessionAlerts) {
-            els.sessionAlerts.textContent = state.session.metrics.alertCount || 0;
-          }
-        }
-        if (state.lastScore !== null && els.scoreDisplay) {
-          els.scoreDisplay.textContent = state.lastScore;
-          if (els.scoreSection) els.scoreSection.style.display = '';
-        }
-
-        // Highlight report button
-        if (els.reportBtn) {
-          els.reportBtn.style.background = '#5b21b6';
-          els.reportBtn.style.color = '#fff';
-          els.reportBtn.style.fontWeight = '600';
-          els.reportBtn.textContent = 'Generate Report \u2192';
-          els.reportBtn.disabled = false;
-        }
-
-        // Restore calibration badge
+        showSessionCompleteUI(state.session);
         if (state.hasCalibration && els.calStatus) {
           els.calStatus.textContent = 'Calibrated';
           els.calStatus.classList.add('calibrated');
