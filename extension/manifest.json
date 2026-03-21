@@ -37,6 +37,14 @@
         "posture/posture-overlay.css"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "http://localhost:3000/auth/extension*",
+        "https://*.vercel.app/auth/extension*"
+      ],
+      "js": ["lib/auth-bridge.js"],
+      "run_at": "document_idle"
     }
   ],
   "side_panel": {

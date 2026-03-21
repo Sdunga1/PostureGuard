@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createBrowserClient } from '@/lib/supabase'
 
 // ── Exercise Data ──────────────────────────────────────────────────────────────
 const EXERCISES = [
@@ -76,14 +77,19 @@ function formatTime(seconds) {
 }
 
 // ── TopHeader ──────────────────────────────────────────────────────────────────
-function TopHeader({ title = 'PostureGuard', subTitle = '' }) {
+function TopHeader({ title = 'PostureGuard', subTitle = '', user = null, onSignIn, onSignOut }) {
   return (
     <header className="fixed top-0 w-full z-50 bg-vs-bg/80 backdrop-blur-md border-b border-vs-outline-variant/20">
       <div className="flex justify-between items-center w-full px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-vs-primary to-vs-tertiary opacity-90 flex items-center justify-center">
-            <div className="w-3 h-3 rounded-full bg-vs-bg" />
-          </div>
+          {/* Concentric circles logo — matching extension */}
+          <svg width="28" height="28" viewBox="0 0 56 56" fill="none">
+            <circle cx="28" cy="28" r="26" stroke="url(#hg)" strokeWidth="1.5" opacity="0.25"/>
+            <circle cx="28" cy="28" r="20" stroke="url(#hg)" strokeWidth="1.5" opacity="0.45"/>
+            <circle cx="28" cy="28" r="14" stroke="url(#hg)" strokeWidth="2"/>
+            <circle cx="28" cy="28" r="4" fill="#4CD7F6"/>
+            <defs><linearGradient id="hg" x1="0" y1="0" x2="56" y2="56"><stop offset="0%" stopColor="#4CD7F6"/><stop offset="100%" stopColor="#c2d8f8"/></linearGradient></defs>
+          </svg>
           <span className="text-lg font-extrabold text-vs-on-surface font-headline tracking-tighter">{title}</span>
           {subTitle && (
             <>
@@ -92,18 +98,138 @@ function TopHeader({ title = 'PostureGuard', subTitle = '' }) {
             </>
           )}
         </div>
-        <div className="hidden md:flex items-center gap-8">
-          <span className="font-label text-xs uppercase tracking-widest text-vs-primary cursor-pointer">Flow</span>
-          <span className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Insights</span>
-          <span className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Biometrics</span>
-          <div className="w-8 h-8 rounded-full bg-vs-surface-high flex items-center justify-center cursor-pointer hover:bg-vs-surface-highest transition-colors">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-            </svg>
+        <div className="flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-8">
+            <span className="font-label text-xs uppercase tracking-widest text-vs-primary cursor-pointer">Flow</span>
+            <span className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Insights</span>
+            <span className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Biometrics</span>
           </div>
+          {user ? (
+            <div className="flex items-center gap-3">
+              {user.user_metadata?.avatar_url ? (
+                <img src={user.user_metadata.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-vs-primary/30" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-vs-primary to-vs-tertiary flex items-center justify-center text-vs-bg font-headline font-bold text-sm">
+                  {(user.user_metadata?.full_name || user.email || 'U').charAt(0).toUpperCase()}
+                </div>
+              )}
+              <button onClick={onSignOut} className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-primary transition-colors">
+                Sign Out
+              </button>
+            </div>
+          ) : onSignIn ? (
+            <button onClick={onSignIn} className="px-5 py-2 rounded-lg bg-vs-surface-mid border border-vs-outline-variant/20 hover:border-vs-primary/30 transition-all">
+              <span className="font-label text-xs text-vs-on-surface">Sign In</span>
+            </button>
+          ) : null}
         </div>
       </div>
     </header>
+  )
+}
+
+// ── Screen: LANDING (public, unauthenticated) ────────────────────────────────
+function LandingScreen() {
+  const goToLogin = () => { window.location.href = '/login' }
+
+  return (
+    <div className="bg-vs-bg min-h-screen flex flex-col">
+      <TopHeader onSignIn={goToLogin} />
+
+      <div className="fixed inset-0 dot-grid pointer-events-none" />
+      <div className="fixed inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 30%, rgba(76,215,246,0.06) 0%, transparent 60%)' }} />
+
+      {/* Hero */}
+      <main className="relative flex-1 flex flex-col items-center justify-center px-6 pt-24 pb-16">
+        <div className="text-center max-w-2xl mx-auto">
+          {/* Brand Icon */}
+          <div className="mb-8 flex justify-center">
+            <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+              <circle cx="40" cy="40" r="38" stroke="url(#lg)" strokeWidth="1.5" opacity="0.25"/>
+              <circle cx="40" cy="40" r="28" stroke="url(#lg)" strokeWidth="1.5" opacity="0.45"/>
+              <circle cx="40" cy="40" r="18" stroke="url(#lg)" strokeWidth="2"/>
+              <circle cx="40" cy="40" r="6" fill="#4CD7F6"/>
+              <defs><linearGradient id="lg" x1="0" y1="0" x2="80" y2="80"><stop offset="0%" stopColor="#4CD7F6"/><stop offset="100%" stopColor="#c2d8f8"/></linearGradient></defs>
+            </svg>
+          </div>
+
+          <h1 className="text-5xl md:text-7xl font-headline font-bold tracking-tight text-vs-on-surface mb-4">
+            Your posture,<br />
+            <span className="vs-gradient-text">reimagined.</span>
+          </h1>
+          <p className="text-lg md:text-xl text-vs-on-surface-variant font-light max-w-lg mx-auto mb-12 leading-relaxed">
+            AI-powered posture detection and personalized recovery exercises.
+            Track, improve, and protect your spine — all from your browser.
+          </p>
+
+          {/* CTA */}
+          <button
+            onClick={goToLogin}
+            className="vs-btn-primary px-12 py-4 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm mb-4"
+          >
+            Get Started
+          </button>
+          <p className="text-xs text-vs-on-surface-variant/50">Free during beta. No credit card required.</p>
+        </div>
+
+        {/* Features */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mt-20">
+          <div className="glass-card rounded-2xl p-6 text-center">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-vs-primary/10 flex items-center justify-center">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4CD7F6" strokeWidth="2">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+              </svg>
+            </div>
+            <h3 className="font-headline font-semibold text-vs-on-surface mb-2">Real-Time Detection</h3>
+            <p className="text-sm text-vs-on-surface-variant">Camera-based posture analysis runs locally in your browser. Your data never leaves your device.</p>
+          </div>
+          <div className="glass-card rounded-2xl p-6 text-center">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-vs-primary/10 flex items-center justify-center">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4CD7F6" strokeWidth="2">
+                <path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M20 12a8 8 0 0 0-8-8v8h8z"/>
+              </svg>
+            </div>
+            <h3 className="font-headline font-semibold text-vs-on-surface mb-2">AI Coaching</h3>
+            <p className="text-sm text-vs-on-surface-variant">Claude-powered nudges correct your posture in real time with personalized advice.</p>
+          </div>
+          <div className="glass-card rounded-2xl p-6 text-center">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-vs-primary/10 flex items-center justify-center">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4CD7F6" strokeWidth="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+            </div>
+            <h3 className="font-headline font-semibold text-vs-on-surface mb-2">Recovery Sessions</h3>
+            <p className="text-sm text-vs-on-surface-variant">Guided exercises tailored to your posture issues. Track progress across sessions.</p>
+          </div>
+        </div>
+
+        {/* How it works */}
+        <div className="max-w-3xl mx-auto mt-24 text-center">
+          <h2 className="font-headline text-2xl font-bold text-vs-on-surface mb-12">How it works</h2>
+          <div className="flex flex-col md:flex-row items-center justify-center gap-8">
+            {[
+              { step: '01', title: 'Install Extension', desc: 'Add PostureGuard to Chrome in one click' },
+              { step: '02', title: 'Calibrate', desc: 'Sit up straight and capture your ideal posture' },
+              { step: '03', title: 'Get Coached', desc: 'AI monitors and nudges you to maintain posture' },
+              { step: '04', title: 'Recover', desc: 'Personalized exercises based on your session data' },
+            ].map((item, i) => (
+              <div key={i} className="flex flex-col items-center">
+                <span className="font-headline text-3xl font-bold vs-gradient-text mb-2">{item.step}</span>
+                <h3 className="font-headline font-semibold text-vs-on-surface text-sm mb-1">{item.title}</h3>
+                <p className="text-xs text-vs-on-surface-variant max-w-[140px]">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <footer className="mt-24 text-center">
+          <p className="text-xs text-vs-on-surface-variant/40">
+            Built for HackASU 2026 &middot; Privacy-first &middot; Camera data stays on your device
+          </p>
+        </footer>
+      </main>
+    </div>
   )
 }
 
@@ -111,7 +237,7 @@ function TopHeader({ title = 'PostureGuard', subTitle = '' }) {
 // Phase 0 → greeting alone, centred, full screen
 // Phase 1 → greeting fades out, quote appears alone, centred
 // Phase 2 → quote fades out, report card appears (clean – no name/quote above)
-function IntroScreen({ onStart }) {
+function IntroScreen({ onStart, user, sessionReport, onSignIn, onSignOut }) {
   const [phase, setPhase] = useState(0)
 
   useEffect(() => {
@@ -141,7 +267,7 @@ function IntroScreen({ onStart }) {
 
   return (
     <div className="bg-vs-bg min-h-screen flex flex-col">
-      <TopHeader />
+      <TopHeader user={user} onSignIn={onSignIn} onSignOut={onSignOut} />
       <div className="fixed inset-0 dot-grid pointer-events-none" />
       <div className="fixed inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(76,215,246,0.06) 0%, transparent 60%)' }} />
 
@@ -152,7 +278,7 @@ function IntroScreen({ onStart }) {
           {/* ── Panel 0 : Greeting ── */}
           <div style={panel(0)} className="px-4">
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-headline font-bold tracking-tight text-vs-on-surface">
-              Welcome back,<br /><span className="vs-gradient-text">Sarath.</span>
+              Welcome back,<br /><span className="vs-gradient-text">{user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'there'}.</span>
             </h1>
           </div>
 
@@ -174,7 +300,7 @@ function IntroScreen({ onStart }) {
                 </div>
                 <div className="text-right">
                   <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant/60">Session ID</span>
-                  <p className="font-mono text-sm text-vs-on-surface-variant mt-0.5">PG-992-DELTA</p>
+                  <p className="font-mono text-sm text-vs-on-surface-variant mt-0.5">{sessionReport?.session_id ? sessionReport.session_id.slice(0, 8).toUpperCase() : 'PG-LIVE'}</p>
                 </div>
               </div>
 
@@ -183,7 +309,7 @@ function IntroScreen({ onStart }) {
                 <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
                   <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Posture Score</span>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="font-headline text-3xl font-bold text-vs-primary">78%</span>
+                    <span className="font-headline text-3xl font-bold text-vs-primary">{sessionReport?.avg_score ?? 78}%</span>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4CD7F6" strokeWidth="2.5">
                       <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" />
                     </svg>
@@ -191,11 +317,11 @@ function IntroScreen({ onStart }) {
                 </div>
                 <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
                   <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Head Tilt</span>
-                  <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">12°</span>
+                  <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">{sessionReport?.metrics?.avgHeadTilt ? Math.round(sessionReport.metrics.avgHeadTilt) : 12}°</span>
                 </div>
                 <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
                   <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Slouch Angle</span>
-                  <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">4.5°</span>
+                  <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">{sessionReport?.metrics?.avgSlouchAngle ? sessionReport.metrics.avgSlouchAngle.toFixed(1) : '4.5'}°</span>
                 </div>
               </div>
 
@@ -220,7 +346,7 @@ function IntroScreen({ onStart }) {
               {/* CTA */}
               <button
                 onClick={onStart}
-                className="vs-btn-primary w-full py-5 rounded-full text-vs-bg font-headline font-bold uppercase tracking-widest text-sm"
+                className="vs-btn-primary w-full py-5 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm"
               >
                 Start Recovery Session
               </button>
@@ -297,13 +423,13 @@ function CountdownScreen({ onComplete }) {
 }
 
 // ── Screen: SESSION ────────────────────────────────────────────────────────────
-function SessionScreen({ exercise, exerciseIndex, totalExercises, timeLeft, onPause, onSkipNext, onSkipPrev }) {
+function SessionScreen({ exercise, exerciseIndex, totalExercises, timeLeft, onPause, onSkipNext, onSkipPrev, user, onSignOut }) {
   const progress = exerciseIndex / totalExercises
   const progressPct = Math.round(progress * 100)
 
   return (
     <div className="bg-vs-bg min-h-screen flex flex-col">
-      <TopHeader title="NeuralCortex" subTitle="Active Session" />
+      <TopHeader title="PostureGuard" subTitle="Active Session" user={user} onSignOut={onSignOut} />
 
       <main className="min-h-screen pt-24 pb-32 px-4 md:px-6 flex flex-col items-center justify-center max-w-6xl mx-auto w-full">
         {/* Exercise Header */}
@@ -436,7 +562,7 @@ function SessionScreen({ exercise, exerciseIndex, totalExercises, timeLeft, onPa
 }
 
 // ── Screen: PAUSED ────────────────────────────────────────────────────────────
-function PausedScreen({ exercise, nextExercise, pausedSeconds, onResume }) {
+function PausedScreen({ exercise, nextExercise, pausedSeconds, onResume, user, onSignOut }) {
   // Circular timer — show 30s rest window
   const restDuration = 30
   const circumference = 2 * Math.PI * 90
@@ -445,7 +571,7 @@ function PausedScreen({ exercise, nextExercise, pausedSeconds, onResume }) {
 
   return (
     <div className="bg-vs-bg min-h-screen flex flex-col">
-      <TopHeader />
+      <TopHeader title="PostureGuard" subTitle="Rest" user={user} onSignOut={onSignOut} />
       <main className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden pt-20 pb-24 px-6">
         <div className="absolute inset-0 synaptic-pulse pointer-events-none" />
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(76,215,246,0.05) 0%, transparent 60%)' }} />
@@ -507,7 +633,7 @@ function PausedScreen({ exercise, nextExercise, pausedSeconds, onResume }) {
           {/* Resume Button */}
           <button
             onClick={onResume}
-            className="vs-btn-primary w-full max-w-sm py-5 rounded-full text-vs-bg font-headline font-bold uppercase tracking-widest text-sm"
+            className="vs-btn-primary w-full max-w-sm py-5 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm"
           >
             Resume Session
           </button>
@@ -530,7 +656,7 @@ function PausedScreen({ exercise, nextExercise, pausedSeconds, onResume }) {
 }
 
 // ── Screen: COMPLETE ───────────────────────────────────────────────────────────
-function CompleteScreen({ sessionData, onReturn }) {
+function CompleteScreen({ sessionData, onReturn, userName, user, onSignOut }) {
   const [phase, setPhase] = useState(0)
   // phase 0: quote only
   // phase 1: quote fades + session breakdown appears
@@ -648,7 +774,7 @@ function CompleteScreen({ sessionData, onReturn }) {
           </div>
 
           <p className="font-label text-[10px] uppercase tracking-[0.2em] text-vs-on-surface-variant/40">
-            See you in the next session, Sarath.
+            See you in the next session, {userName || 'there'}.
           </p>
         </div>
       </main>
@@ -663,6 +789,88 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState(EXERCISES[0].duration)
   const [pausedSeconds, setPausedSeconds] = useState(0)
   const [sessionStartTime] = useState(Date.now())
+
+  // ── Auth State ──
+  const [user, setUser] = useState(null)
+  const [sessionReport, setSessionReport] = useState(null)
+  const [sessionError, setSessionError] = useState(null)
+  const [pendingSessionId, setPendingSessionId] = useState(null)
+  const supabaseRef = useRef(null)
+
+  // Initialize Supabase + check auth
+  useEffect(() => {
+    const supabase = createBrowserClient()
+    supabaseRef.current = supabase
+
+    supabase.auth.getUser().then(({ data: { user: u } }) => {
+      setUser(u)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null)
+    })
+
+    // Capture session ID from URL
+    const params = new URLSearchParams(window.location.search)
+    const sessionId = params.get('id')
+    if (sessionId) {
+      setPendingSessionId(sessionId)
+    }
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // Load session data AFTER user is authenticated
+  useEffect(() => {
+    if (!user || !pendingSessionId) return
+    if (sessionReport) return // Already loaded
+
+    const loadSession = async () => {
+      try {
+        const supabase = supabaseRef.current
+        const { data: { session: authSession } } = await supabase.auth.getSession()
+
+        const response = await fetch(`/api/sessions/${pendingSessionId}`, {
+          headers: authSession ? { 'Authorization': `Bearer ${authSession.access_token}` } : {}
+        })
+        const data = await response.json()
+
+        if (response.ok && data.session) {
+          setSessionReport(data.session)
+          setSessionError(null)
+        } else if (data.ownerMismatch) {
+          setSessionError('This session belongs to a different account. Please sign in with the account you used in the extension.')
+        } else if (data.requiresAuth) {
+          setSessionError('Please sign in to view this session.')
+        } else {
+          setSessionError('Session not found.')
+        }
+      } catch (err) {
+        console.warn('Failed to load session:', err)
+        setSessionError('Failed to load session data.')
+      }
+    }
+
+    loadSession()
+  }, [user, pendingSessionId, sessionReport])
+
+  const handleSignIn = useCallback(() => {
+    const supabase = supabaseRef.current
+    if (!supabase) return
+    supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/auth/callback' }
+    })
+  }, [])
+
+  const handleSignOut = useCallback(async () => {
+    const supabase = supabaseRef.current
+    if (!supabase) return
+    await supabase.auth.signOut()
+    setUser(null)
+  }, [])
+
+  const userName = user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || null
 
   const currentExercise = EXERCISES[currentExerciseIndex]
   const nextExercise = EXERCISES[currentExerciseIndex + 1] || null
@@ -753,10 +961,52 @@ export default function App() {
   }
 
   // ── Render ──
+
+  // Show landing page if not authenticated
+  if (!user) {
+    return <LandingScreen />
+  }
+
+  // Show loading while verifying session ownership
+  if (pendingSessionId && !sessionReport && !sessionError) {
+    return (
+      <div className="bg-vs-bg min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-vs-primary border-t-transparent animate-spin" />
+          <p className="text-sm text-vs-on-surface-variant">Loading your session...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error if session belongs to a different account
+  if (sessionError) {
+    return (
+      <div className="bg-vs-bg min-h-screen flex flex-col">
+        <TopHeader user={user} onSignOut={handleSignOut} />
+        <div className="fixed inset-0 dot-grid pointer-events-none" />
+        <main className="flex-1 flex items-center justify-center px-6 pt-20">
+          <div className="glass-card rounded-2xl p-8 max-w-md text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/10 flex items-center justify-center">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+            </div>
+            <h2 className="font-headline text-xl font-bold text-vs-on-surface mb-2">Access Denied</h2>
+            <p className="text-sm text-vs-on-surface-variant mb-6">{sessionError}</p>
+            <button onClick={handleSignOut} className="vs-btn-primary px-8 py-3 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-xs">
+              Sign in with a different account
+            </button>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
   return (
     <>
       {screen === 'intro' && (
-        <IntroScreen onStart={handleStart} />
+        <IntroScreen onStart={handleStart} user={user} sessionReport={sessionReport} onSignIn={handleSignIn} onSignOut={handleSignOut} />
       )}
       {screen === 'countdown' && (
         <CountdownScreen onComplete={handleCountdownComplete} />
@@ -770,6 +1020,8 @@ export default function App() {
           onPause={handlePause}
           onSkipNext={handleSkipNext}
           onSkipPrev={handleSkipPrev}
+          user={user}
+          onSignOut={handleSignOut}
         />
       )}
       {screen === 'paused' && (
@@ -778,12 +1030,17 @@ export default function App() {
           nextExercise={nextExercise}
           pausedSeconds={pausedSeconds}
           onResume={handleResume}
+          user={user}
+          onSignOut={handleSignOut}
         />
       )}
       {screen === 'complete' && (
         <CompleteScreen
           sessionData={sessionData}
           onReturn={handleReturn}
+          userName={userName}
+          user={user}
+          onSignOut={handleSignOut}
         />
       )}
     </>

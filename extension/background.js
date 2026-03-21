@@ -5,7 +5,7 @@
 // Content scripts send raw landmarks here; background scores, tracks, and pushes nudges.
 
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
-const CLAUDE_MODEL = 'claude-sonnet-4-5-20241022';
+const CLAUDE_MODEL = 'claude-haiku-4-5-20251001';
 const ANTHROPIC_VERSION = '2023-06-01';
 
 // ─── Settings (synced via chrome.storage) ──────────────────────
@@ -20,7 +20,7 @@ const settings = {
 
 const SCORE_BROADCAST_INTERVAL_MS = 1000;
 const ROLLING_WINDOW_MS = 30000;
-const SESSION_DURATION_MS = 2 * 60 * 1000; // 2 minutes per session (demo mode)
+const SESSION_DURATION_MS = 1 * 60 * 1000; // 1 minute per session (dev/testing mode)
 
 // Landmark indices (Human.js / MediaPipe Face Mesh)
 const NOSE_TIP = 1;
@@ -45,6 +45,7 @@ let session = {
 };
 
 // Rate limiting for Claude API calls
+let sessionEnding = false;  // Guard against repeated session-end processing
 let lastNudgeTime = 0;
 const NUDGE_COOLDOWN_MS = 120000;
 
@@ -105,6 +106,11 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     if (key === 'postureCalV1') {
       calibration = newValue;
       console.log('[PostureGuard BG] Calibration updated');
+    }
+    // Reset session when monitoring is re-enabled
+    if (key === 'postureEnabled' && newValue === true) {
+      resetSession();
+      console.log('[PostureGuard BG] Session reset — monitoring re-enabled');
     }
   }
 });
@@ -222,6 +228,8 @@ function computeScore(metrics) {
 }
 
 function processFrame(landmarks, ts, tabId) {
+  if (sessionEnding) return; // Session is ending, ignore new frames
+
   if (!session.startTime) session.startTime = Date.now();
 
   // Ensure calibration is loaded (service worker may have restarted)
@@ -238,6 +246,7 @@ function processFrame(landmarks, ts, tabId) {
   if (session.startTime) {
     const elapsed = Date.now() - session.startTime;
     if (elapsed >= SESSION_DURATION_MS) {
+      sessionEnding = true; // Prevent re-entry
       console.log('[PostureGuard BG] Session time limit reached (' + Math.round(elapsed / 1000) + 's)');
 
       const finalSession = getSessionData();
@@ -358,11 +367,12 @@ function getSessionData() {
   };
 }
 
-function resetSession() { // eslint-disable-line no-unused-vars
+function resetSession() {
   session = { startTime: null, scores: [], alerts: [], worstPeriods: [] };
   recentFrames = [];
   badPostureStart = null;
   alertTriggered = false;
+  sessionEnding = false;
 }
 
 function average(arr) {
@@ -375,13 +385,11 @@ function average(arr) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message.type) {
     case 'POSTURE_FRAME':
-      // Central frame processing — the core of global sync
-      // Track which tab is sending frames (has the camera)
-      if (sender.tab?.id) {
-        ownerTabId = sender.tab.id;
+      // Central frame processing — only accept frames from the owner tab
+      if (sender.tab?.id && sender.tab.id === ownerTabId) {
         activeTabId = sender.tab.id;
+        processFrame(message.landmarks, message.ts, sender.tab.id);
       }
-      processFrame(message.landmarks, message.ts, sender.tab?.id);
       return false;
 
     case 'REQUEST_NUDGE':

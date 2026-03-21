@@ -28,12 +28,170 @@
     saveKeyBtn: document.getElementById('save-key-btn'),
     settingsGearBtn: document.getElementById('settings-gear-btn'),
     settingsOverlay: document.getElementById('settings-overlay'),
-    settingsCloseBtn: document.getElementById('settings-close-btn')
+    settingsCloseBtn: document.getElementById('settings-close-btn'),
+    // Auth elements
+    welcomeScreen: document.getElementById('welcome-screen'),
+    mainApp: document.getElementById('main-app'),
+    authSignoutBtn: document.getElementById('auth-signout-btn'),
+    authName: document.getElementById('auth-name'),
+    authEmailDisplay: document.getElementById('auth-email-display'),
+    authAvatar: document.getElementById('auth-avatar'),
+    dropdownAvatar: document.getElementById('dropdown-avatar'),
+    profileBtn: document.getElementById('profile-btn'),
+    profileDropdown: document.getElementById('profile-dropdown'),
+    profileInitial: document.getElementById('profile-initial'),
+    dropdownInitial: document.getElementById('dropdown-initial'),
+    authGoogleBtn: document.getElementById('auth-google-btn'),
+    authError: document.getElementById('auth-error'),
+    vaultStatus: document.getElementById('vault-status'),
+    settingsSection: document.getElementById('settings-section')
   };
+
+  // ─── Auth State ────────────────────────────────────────────────
+  let currentUser = null;
+
+  function updateAuthUI(user) {
+    currentUser = user;
+    if (user) {
+      // Show main app, hide welcome
+      if (els.welcomeScreen) els.welcomeScreen.style.display = 'none';
+      if (els.mainApp) els.mainApp.style.display = '';
+
+      const name = user.name || user.email?.split('@')[0] || 'User';
+      const email = user.email || '';
+      const initial = (name.charAt(0) || 'U').toUpperCase();
+
+      if (els.authName) els.authName.textContent = name;
+      if (els.authEmailDisplay) els.authEmailDisplay.textContent = email;
+      if (els.profileInitial) els.profileInitial.textContent = initial;
+      if (els.dropdownInitial) els.dropdownInitial.textContent = initial;
+
+      const avatar = user.avatar_url;
+      if (avatar) {
+        if (els.authAvatar) { els.authAvatar.src = avatar; els.authAvatar.style.display = ''; }
+        if (els.dropdownAvatar) { els.dropdownAvatar.src = avatar; els.dropdownAvatar.style.display = ''; }
+        if (els.profileInitial) els.profileInitial.style.display = 'none';
+        if (els.dropdownInitial) els.dropdownInitial.style.display = 'none';
+      } else {
+        if (els.authAvatar) els.authAvatar.style.display = 'none';
+        if (els.dropdownAvatar) els.dropdownAvatar.style.display = 'none';
+        if (els.profileInitial) els.profileInitial.style.display = '';
+        if (els.dropdownInitial) els.dropdownInitial.style.display = '';
+      }
+    } else {
+      // Show welcome, hide main app
+      if (els.welcomeScreen) els.welcomeScreen.style.display = '';
+      if (els.mainApp) els.mainApp.style.display = 'none';
+    }
+  }
+
+  async function initAuth() {
+    const auth = window.PostureGuardAuth;
+    if (!auth) return;
+
+    // Check existing stored session
+    const user = await auth.getUser();
+    updateAuthUI(user);
+
+    if (user) {
+      await syncVaultToLocal();
+    }
+
+    // Listen for auth changes via chrome.storage (set by auth-bridge.js)
+    chrome.storage.onChanged.addListener(async (changes, area) => {
+      if (area !== 'local' || !changes.pg_auth) return;
+
+      const newAuth = changes.pg_auth.newValue;
+      if (newAuth && newAuth.user) {
+        updateAuthUI(newAuth.user);
+        await syncVaultToLocal();
+      } else {
+        updateAuthUI(null);
+        await chrome.storage.local.remove('apiKey');
+      }
+    });
+
+    // Listen for AUTH_TOKEN_RECEIVED from auth-bridge content script
+    chrome.runtime.onMessage.addListener(async (message) => {
+      if (message.type === 'AUTH_TOKEN_RECEIVED') {
+        stopAuthPoll();
+        // Close the auth tab
+        await auth.closeAuthTab();
+        // Refresh UI immediately (storage.onChanged should also fire, but be safe)
+        const user = await auth.getUser();
+        if (user) {
+          updateAuthUI(user);
+          await syncVaultToLocal();
+        }
+      }
+    });
+  }
+
+  async function syncVaultToLocal() {
+    try {
+      const token = await window.PostureGuardAuth.getAccessToken();
+      if (!token) return;
+
+      const response = await fetch(getHealthAppUrl() + '/api/vault', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+
+      if (response.ok) {
+        const { key } = await response.json();
+        if (key) {
+          await chrome.storage.local.set({ apiKey: key });
+          settings.apiKey = key;
+          if (els.apiKeyInput) els.apiKeyInput.value = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
+          showVaultStatus('Key synced from cloud', false);
+        }
+      }
+    } catch (err) {
+      console.warn('[PostureGuard] Vault sync failed:', err.message);
+    }
+  }
+
+  async function saveKeyToVault(key) {
+    const token = await window.PostureGuardAuth?.getAccessToken();
+    if (!token) return false;
+
+    try {
+      const response = await fetch(getHealthAppUrl() + '/api/vault', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ key })
+      });
+
+      if (response.ok) {
+        showVaultStatus('Saved securely in cloud', false);
+        return true;
+      }
+    } catch (err) {
+      console.warn('[PostureGuard] Vault save failed:', err.message);
+    }
+    return false;
+  }
+
+  function showVaultStatus(msg, isError) {
+    if (els.vaultStatus) {
+      els.vaultStatus.textContent = msg;
+      els.vaultStatus.style.display = '';
+      els.vaultStatus.className = 'vault-status' + (isError ? ' error' : '');
+      setTimeout(() => { els.vaultStatus.style.display = 'none'; }, 4000);
+    }
+  }
+
+  function getHealthAppUrl() {
+    // Use localhost for dev, Vercel for production
+    return 'http://localhost:3000';
+  }
 
   // ─── Settings ─────────────────────────────────────────────────
 
   let sessionEnded = false; // Flag to prevent UI reset after session completes
+  let userPaused = false;   // Flag to block status updates while user manually paused
 
   const settings = {
     postureEnabled: false,
@@ -60,9 +218,13 @@
       els.debugToggle.checked = settings.debugMode || false;
     }
 
-    if (stored.postureCalV1 && els.calStatus) {
+    // Only show "Calibrated" if monitoring is enabled
+    if (stored.postureCalV1 && els.calStatus && settings.postureEnabled) {
       els.calStatus.textContent = 'Calibrated';
       els.calStatus.classList.add('calibrated');
+    } else if (els.calStatus) {
+      els.calStatus.textContent = 'Not calibrated';
+      els.calStatus.classList.remove('calibrated');
     }
 
     if (settings.apiKey && els.apiKeyInput) {
@@ -109,9 +271,60 @@
 
   // ─── Status UI ────────────────────────────────────────────────
 
+  let typingInterval = null;
+
+  function startTypingAnimation(text) {
+    if (typingInterval) clearInterval(typingInterval);
+    let dots = 0;
+    const base = text.replace(/\.+$/, '');
+    els.statusText.textContent = base;
+    typingInterval = setInterval(() => {
+      dots = (dots + 1) % 4;
+      els.statusText.textContent = base + '.'.repeat(dots || 1);
+    }, 400);
+  }
+
+  function stopTypingAnimation() {
+    if (typingInterval) {
+      clearInterval(typingInterval);
+      typingInterval = null;
+    }
+  }
+
   function updateStatusUI(phase) {
     if (!els.statusDot) return;
     els.statusDot.className = 'status-dot';
+    stopTypingAnimation();
+
+    const isMonitoring = phase === 'live' || phase === 'ready' || phase === 'loading';
+
+    // Lock/unlock settings + calibration based on state
+    if (els.settingsSection) {
+      if (isMonitoring) {
+        els.settingsSection.classList.remove('disabled-section');
+      } else {
+        els.settingsSection.classList.add('disabled-section');
+      }
+    }
+
+    // Calibration section locking
+    const calSection = els.calibrateBtn?.closest('.section');
+    if (calSection) {
+      if (isMonitoring || phase === 'paused') {
+        calSection.classList.remove('disabled-section');
+      } else {
+        calSection.classList.add('disabled-section');
+      }
+    }
+
+    // Calibrate button state
+    if (els.calibrateBtn) {
+      if (phase === 'ready' || phase === 'live' || phase === 'paused') {
+        els.calibrateBtn.disabled = false;
+      } else {
+        els.calibrateBtn.disabled = true;
+      }
+    }
 
     switch (phase) {
       case 'disabled':
@@ -119,18 +332,36 @@
         els.statusText.textContent = 'Disabled';
         if (els.scoreSection) els.scoreSection.style.display = 'none';
         if (els.sessionSection) els.sessionSection.style.display = 'none';
+        if (els.calibrateBtn) els.calibrateBtn.textContent = 'Calibrate Posture';
         break;
       case 'loading':
         els.statusDot.classList.add('loading');
-        els.statusText.textContent = 'Starting...';
+        startTypingAnimation('Starting');
         break;
       case 'ready':
         els.statusDot.classList.add('ready');
-        els.statusText.textContent = 'Ready \u2014 Calibrate to begin';
+        els.statusText.textContent = 'Calibrate to start';
         break;
       case 'live':
         els.statusDot.classList.add('live');
         els.statusText.textContent = 'Monitoring';
+        if (els.scoreSection) els.scoreSection.style.display = '';
+        if (els.sessionSection) els.sessionSection.style.display = '';
+        if (els.calibrateBtn) els.calibrateBtn.textContent = 'Recalibrate Posture';
+        // Disable report during active session
+        if (els.reportBtn) { els.reportBtn.disabled = true; els.reportBtn.className = 'btn btn-secondary'; }
+        break;
+      case 'paused':
+        els.statusDot.classList.add('ready');
+        els.statusText.textContent = 'Paused';
+        if (els.scoreSection) els.scoreSection.style.display = '';
+        if (els.sessionSection) els.sessionSection.style.display = '';
+        if (els.reportBtn) { els.reportBtn.disabled = true; els.reportBtn.className = 'btn btn-secondary'; }
+        break;
+      case 'session-complete':
+        els.statusDot.classList.add('session-complete');
+        els.statusText.textContent = 'Start a new session';
+        // Score stays visible, session stays visible
         if (els.scoreSection) els.scoreSection.style.display = '';
         if (els.sessionSection) els.sessionSection.style.display = '';
         break;
@@ -149,15 +380,22 @@
       await saveSetting('postureEnabled', enabled);
 
       if (!enabled) {
-        updateStatusUI('disabled');
-        if (els.calibrateBtn) els.calibrateBtn.disabled = true;
+        if (sessionEnded) {
+          updateStatusUI('session-complete');
+        } else {
+          const hasCalibration = await chrome.storage.local.get('postureCalV1');
+          if (hasCalibration.postureCalV1) {
+            userPaused = true;
+            updateStatusUI('paused');
+          } else {
+            updateStatusUI('disabled');
+          }
+        }
       } else {
+        userPaused = false;
         updateStatusUI('loading');
-        // Enable calibrate button once monitoring starts
-        if (els.calibrateBtn) els.calibrateBtn.disabled = false;
+        sessionEnded = false;
       }
-      // Reset session ended flag when re-enabling
-      sessionEnded = false;
 
       // Notify content script on active tab
       const response = await sendToActiveTab({
@@ -166,7 +404,6 @@
       });
 
       if (!response && enabled) {
-        // If sending failed, inform user
         updateStatusUI('error');
         if (els.statusText) {
           els.statusText.textContent = 'Open a webpage and try again';
@@ -199,16 +436,136 @@
   }
 
   if (els.saveKeyBtn) {
-    els.saveKeyBtn.addEventListener('click', () => {
+    els.saveKeyBtn.addEventListener('click', async () => {
       const key = els.apiKeyInput.value.trim();
       if (key && !key.startsWith('\u2022')) {
-        saveSetting('apiKey', key);
+        // Save locally
+        await saveSetting('apiKey', key);
         els.apiKeyInput.value = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
+
+        // Also save to vault if logged in
+        if (currentUser) {
+          await saveKeyToVault(key);
+        }
+
         // Close settings panel after saving
         if (els.settingsOverlay) els.settingsOverlay.style.display = 'none';
       }
     });
   }
+
+  // ─── Auth Event Listeners ──────────────────────────────────────
+
+  // Single "Sign In" button — opens health app login page
+  const signInBtn = els.authGoogleBtn || els.authSigninBtn;
+  let authPollId = null;
+
+  function stopAuthPoll() {
+    if (authPollId) {
+      clearInterval(authPollId);
+      authPollId = null;
+    }
+  }
+
+  if (signInBtn) {
+    signInBtn.addEventListener('click', async () => {
+      signInBtn.disabled = true;
+      signInBtn.textContent = 'Waiting for sign in...';
+
+      try {
+        await window.PostureGuardAuth.startLogin(getHealthAppUrl());
+
+        // Poll for auth completion as a fallback
+        // (in case chrome.storage.onChanged event is missed)
+        stopAuthPoll();
+        authPollId = setInterval(async () => {
+          const user = await window.PostureGuardAuth.getUser();
+          if (user) {
+            stopAuthPoll();
+            updateAuthUI(user);
+            await syncVaultToLocal();
+            await window.PostureGuardAuth.closeAuthTab();
+            signInBtn.disabled = false;
+            signInBtn.textContent = 'Sign In';
+          }
+        }, 1000);
+
+        // Stop polling after 2 minutes
+        setTimeout(stopAuthPoll, 120000);
+      } catch (err) {
+        console.warn('[PostureGuard] Failed to open login:', err.message);
+        signInBtn.disabled = false;
+        signInBtn.textContent = 'Sign In';
+      }
+    });
+
+    // Re-enable button when auth storage changes (success or tab closed without signing in)
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && changes.pg_auth) {
+        stopAuthPoll();
+        signInBtn.disabled = false;
+        signInBtn.textContent = 'Sign In';
+      }
+    });
+
+    // Also re-enable if user closes the auth tab manually
+    chrome.tabs.onRemoved.addListener((tabId) => {
+      if (tabId === window.PostureGuardAuth?._authTabId) {
+        stopAuthPoll();
+        window.PostureGuardAuth._authTabId = null;
+        signInBtn.disabled = false;
+        signInBtn.textContent = 'Sign In';
+      }
+    });
+  }
+
+  if (els.authSignoutBtn) {
+    els.authSignoutBtn.addEventListener('click', async () => {
+      els.authSignoutBtn.disabled = true;
+      els.authSignoutBtn.textContent = 'Signing out...';
+
+      try {
+        // Stop monitoring before logging out
+        if (settings.postureEnabled) {
+          await saveSetting('postureEnabled', false);
+          if (els.postureToggle) els.postureToggle.checked = false;
+          await sendToActiveTab({ type: 'POSTURE_ENABLED_CHANGED', enabled: false });
+          updateStatusUI('disabled');
+        }
+
+        // Clear auth data
+        await window.PostureGuardAuth.signOut();
+      } catch (err) {
+        console.warn('[PostureGuard] Logout failed:', err.message);
+      }
+
+      if (els.profileDropdown) els.profileDropdown.style.display = 'none';
+      updateAuthUI(null);
+
+      // Re-enable button
+      els.authSignoutBtn.disabled = false;
+      els.authSignoutBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M6 12.5a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v2a.5.5 0 0 1-1 0v-2A1.5 1.5 0 0 1 6.5 2h8A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 5 12.5v-2a.5.5 0 0 1 1 0v2z"/><path d="M.146 8.354a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L1.707 7.5H10.5a.5.5 0 0 1 0 1H1.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3z"/></svg> Sign Out';
+    });
+  }
+
+  // Profile dropdown toggle
+  if (els.profileBtn) {
+    els.profileBtn.addEventListener('click', () => {
+      if (els.profileDropdown) {
+        const isOpen = els.profileDropdown.style.display !== 'none';
+        els.profileDropdown.style.display = isOpen ? 'none' : '';
+      }
+    });
+  }
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (els.profileDropdown && els.profileBtn &&
+        !els.profileBtn.contains(e.target) &&
+        !els.profileDropdown.contains(e.target)) {
+      els.profileDropdown.style.display = 'none';
+    }
+  });
 
   // Settings gear — open/close settings overlay
   if (els.settingsGearBtn) {
@@ -250,11 +607,68 @@
             sessionResponse.data.claudeAnalysis = result.analysis;
           }
 
+          // Save session to cloud if logged in
+          let sessionUrl = null;
+          let saveFailed = false;
+          if (currentUser) {
+            sessionUrl = await postSessionToCloud(sessionResponse.data);
+            if (!sessionUrl) saveFailed = true;
+          }
+
           if (els.qrSection) els.qrSection.style.display = '';
           if (els.qrContainer) {
-            els.qrContainer.innerHTML =
-              '<p style="font-size: 12px; color: #666; text-align: center;">' +
-              'QR code generation ready.<br>Report data prepared for health app.</p>';
+            if (sessionUrl) {
+              els.qrContainer.innerHTML =
+                '<p style="font-size: 12px; color: var(--color-success); text-align: center;">' +
+                'Session saved! Open your health app:</p>' +
+                '<button id="open-app-btn" class="btn btn-primary" style="width:100%;margin-top:8px;font-size:13px;">Open Health App</button>' +
+                '<button id="copy-link-btn" class="btn btn-secondary" style="width:100%;margin-top:6px;font-size:12px;">Copy Link</button>';
+
+              const openBtn = document.getElementById('open-app-btn');
+              if (openBtn) {
+                openBtn.addEventListener('click', () => {
+                  window.open(sessionUrl, '_blank', 'width=1200,height=800,menubar=no,toolbar=no');
+                });
+              }
+
+              const copyBtn = document.getElementById('copy-link-btn');
+              if (copyBtn) {
+                copyBtn.addEventListener('click', () => {
+                  navigator.clipboard.writeText(sessionUrl);
+                  copyBtn.textContent = 'Copied!';
+                  setTimeout(() => { copyBtn.textContent = 'Copy Link'; }, 2000);
+                });
+              }
+            } else if (saveFailed) {
+              els.qrContainer.innerHTML =
+                '<p style="font-size: 12px; color: #f59e0b; text-align: center;">' +
+                'Could not save session. Try generating the report again.</p>' +
+                '<button id="retry-save-btn" class="btn btn-secondary" style="width:100%;margin-top:8px;font-size:12px;">Retry Save</button>';
+
+              const retryBtn = document.getElementById('retry-save-btn');
+              if (retryBtn) {
+                retryBtn.addEventListener('click', async () => {
+                  retryBtn.textContent = 'Saving...';
+                  retryBtn.disabled = true;
+                  const url = await postSessionToCloud(sessionResponse.data);
+                  if (url) {
+                    els.qrContainer.innerHTML =
+                      '<p style="font-size: 12px; color: var(--color-success); text-align: center;">' +
+                      'Session saved!</p>' +
+                      '<button id="open-app-btn2" class="btn btn-primary" style="width:100%;margin-top:8px;font-size:13px;">Open Health App</button>';
+                    const btn = document.getElementById('open-app-btn2');
+                    if (btn) btn.addEventListener('click', () => window.open(url, '_blank'));
+                  } else {
+                    retryBtn.textContent = 'Retry Save';
+                    retryBtn.disabled = false;
+                  }
+                });
+              }
+            } else {
+              els.qrContainer.innerHTML =
+                '<p style="font-size: 12px; color: #666; text-align: center;">' +
+                'Sign in to save sessions and share reports.</p>';
+            }
           }
         }
       } catch (err) {
@@ -288,23 +702,15 @@
       sessionUpdateInterval = null;
     }
 
-    // Update status
-    if (els.statusDot) {
-      els.statusDot.className = 'status-dot';
-      els.statusDot.classList.add('off');
-    }
-    if (els.statusText) {
-      els.statusText.textContent = 'Session complete (2 min)';
-    }
+    // Use proper state machine phase
     if (els.postureToggle) els.postureToggle.checked = false;
+    updateStatusUI('session-complete');
 
     // Show final session stats
     if (sessionData) {
       if (els.scoreDisplay) {
         els.scoreDisplay.textContent = sessionData.metrics.avgPostureScore || '--';
       }
-      if (els.scoreSection) els.scoreSection.style.display = '';
-      if (els.sessionSection) els.sessionSection.style.display = '';
       if (els.sessionDuration) {
         els.sessionDuration.textContent = Math.floor(sessionData.duration / 60) + 'm';
       }
@@ -316,11 +722,16 @@
       }
     }
 
-    // Highlight report button
+    // Add "Session complete" label inside session card
+    const durationMin = sessionData ? Math.ceil(sessionData.duration / 60) : 1;
+    const sessionH2 = els.sessionSection?.querySelector('h2');
+    if (sessionH2) {
+      sessionH2.textContent = `Session Complete (${durationMin} min)`;
+    }
+
+    // Highlight report button with gradient
     if (els.reportBtn) {
-      els.reportBtn.style.background = '#5b21b6';
-      els.reportBtn.style.color = '#fff';
-      els.reportBtn.style.fontWeight = '600';
+      els.reportBtn.className = 'btn btn-report';
       els.reportBtn.textContent = 'Generate Report \u2192';
       els.reportBtn.disabled = false;
     }
@@ -345,7 +756,7 @@
         }
         break;
       case 'POSTURE_STATUS_UPDATE':
-        if (!sessionEnded) {
+        if (!sessionEnded && !userPaused) {
           updateStatusUI(message.phase);
         }
         break;
@@ -359,6 +770,12 @@
   function startSessionTimer() {
     if (sessionUpdateInterval) return;
     sessionUpdateInterval = setInterval(async () => {
+      // Stop polling if session ended
+      if (sessionEnded) {
+        clearInterval(sessionUpdateInterval);
+        sessionUpdateInterval = null;
+        return;
+      }
       try {
         const state = await chrome.runtime.sendMessage({ type: 'GET_CURRENT_STATE' });
         if (state && state.ok && state.session) {
@@ -469,17 +886,19 @@
         }
       }
 
-      // Restore calibration badge
+      // Restore calibration badge + button text
       if (state.hasCalibration && els.calStatus) {
         els.calStatus.textContent = 'Calibrated';
         els.calStatus.classList.add('calibrated');
+        if (els.calibrateBtn) els.calibrateBtn.textContent = 'Recalibrate Posture';
       }
 
-      // Restore monitoring status + calibrate button
+      // Restore monitoring status using proper state machine
       if (state.isRunning || state.postureEnabled) {
-        if (els.calibrateBtn) els.calibrateBtn.disabled = false;
-        if (state.isRunning || state.hasCalibration) {
+        if (state.isRunning && state.hasCalibration) {
           updateStatusUI('live');
+        } else if (state.hasCalibration) {
+          updateStatusUI('ready');
         } else {
           updateStatusUI('ready');
         }
@@ -489,8 +908,38 @@
     }
   }
 
+  // ─── Post Session to Cloud ──────────────────────────────────────
+
+  async function postSessionToCloud(sessionData) {
+    const token = await window.PostureGuardAuth?.getAccessToken();
+    if (!token) return null;
+
+    try {
+      const response = await fetch(getHealthAppUrl() + '/api/sessions', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          sessionData: sessionData,
+          claudeAnalysis: sessionData.claudeAnalysis || null
+        })
+      });
+
+      if (response.ok) {
+        const { id } = await response.json();
+        return getHealthAppUrl() + '/?id=' + id;
+      }
+    } catch (err) {
+      console.warn('[PostureGuard] Session post failed:', err.message);
+    }
+    return null;
+  }
+
   // ─── Init ─────────────────────────────────────────────────────
 
   loadSettings();
   restoreState();
+  initAuth();
 })();
