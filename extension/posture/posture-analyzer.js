@@ -191,7 +191,7 @@
     if (ts - lastScoreDispatch > SCORE_DISPATCH_INTERVAL_MS) {
       lastScoreDispatch = ts;
       window.dispatchEvent(new CustomEvent('posture:score', {
-        detail: { score, metrics, ts }
+        detail: { score: Math.round(score), metrics, ts }
       }));
     }
   }
