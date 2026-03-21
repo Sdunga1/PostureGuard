@@ -345,6 +345,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ ok: true, data: getSessionData() });
       return false;
 
+    case 'GET_CURRENT_STATE':
+      // Side panel asks for full state on load/reopen
+      sendResponse({
+        ok: true,
+        postureEnabled: settings.postureEnabled,
+        isRunning: cameraTabId !== null,
+        hasCalibration: calibration !== null,
+        lastScore: session.scores.length > 0
+          ? session.scores[session.scores.length - 1]
+          : null,
+        session: getSessionData()
+      });
+      return false;
+
     case 'GET_SETTINGS':
       sendResponse(settings);
       return false;

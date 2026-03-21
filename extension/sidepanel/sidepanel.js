@@ -252,7 +252,53 @@
     }
   });
 
+  // ─── Restore state from background on (re)open ──────────────
+
+  async function restoreState() {
+    try {
+      const state = await chrome.runtime.sendMessage({ type: 'GET_CURRENT_STATE' });
+      if (!state || !state.ok) return;
+
+      // Restore score display
+      if (state.lastScore !== null && els.scoreDisplay) {
+        els.scoreDisplay.textContent = state.lastScore;
+        if (els.scoreSection) els.scoreSection.style.display = '';
+      }
+
+      // Restore session stats
+      if (state.session && els.sessionSection) {
+        els.sessionSection.style.display = '';
+        if (els.sessionDuration) {
+          const mins = Math.floor(state.session.duration / 60);
+          els.sessionDuration.textContent = mins + 'm';
+        }
+        if (els.sessionAvg) {
+          els.sessionAvg.textContent = state.session.metrics.avgPostureScore || '--';
+        }
+        if (els.sessionAlerts) {
+          els.sessionAlerts.textContent = state.session.metrics.alertCount || 0;
+        }
+      }
+
+      // Restore monitoring status
+      if (state.isRunning) {
+        updateStatusUI('live');
+      } else if (state.postureEnabled) {
+        updateStatusUI('loading');
+      }
+
+      // Restore calibration badge
+      if (state.hasCalibration && els.calStatus) {
+        els.calStatus.textContent = 'Calibrated';
+        els.calStatus.classList.add('calibrated');
+      }
+    } catch (_e) {
+      // Background not ready yet
+    }
+  }
+
   // ─── Init ─────────────────────────────────────────────────────
 
   loadSettings();
+  restoreState();
 })();
