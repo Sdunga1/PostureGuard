@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createBrowserClient } from '@/lib/supabase'
 
-// ── Exercise Data ──────────────────────────────────────────────────────────────
-const EXERCISES = [
+// ── Exercise Pool (mapped to posture issue types) ────────────────────────────
+const EXERCISE_POOL = [
   {
     id: 1,
     name: 'Chin Tucks',
@@ -14,6 +14,7 @@ const EXERCISES = [
     tip: 'Keep your eyes level and tuck your chin toward your throat.',
     sensor: 'C-Spine sensor at 94% accuracy.',
     image: 'https://images.unsplash.com/photo-1654613412232-10aaf36df8a6?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85&w=900',
+    issues: ['forward_head', 'slouch'],
   },
   {
     id: 2,
@@ -24,6 +25,7 @@ const EXERCISES = [
     tip: 'Roll shoulders backward in a slow, full circular motion.',
     sensor: 'Shoulder sensor at 92% accuracy.',
     image: 'https://images.pexels.com/photos/7289370/pexels-photo-7289370.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940',
+    issues: ['shoulder_asymmetry', 'slouch'],
   },
   {
     id: 3,
@@ -34,6 +36,7 @@ const EXERCISES = [
     tip: 'Gently tilt head side to side, hold each position for 3 seconds.',
     sensor: 'Neck sensor at 91% accuracy.',
     image: 'https://images.pexels.com/photos/6339450/pexels-photo-6339450.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940',
+    issues: ['lateral_tilt', 'forward_head'],
   },
   {
     id: 4,
@@ -44,6 +47,7 @@ const EXERCISES = [
     tip: 'Extend spine tall, squeeze shoulder blades together firmly.',
     sensor: 'Lumbar sensor at 89% accuracy.',
     image: 'https://images.unsplash.com/photo-1563427632003-20f6943d3a6d?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85&w=900',
+    issues: ['slouch', 'forward_head'],
   },
   {
     id: 5,
@@ -54,8 +58,122 @@ const EXERCISES = [
     tip: 'Lunge forward and press hips downward, feeling the stretch through hip flexors.',
     sensor: 'Hip sensor at 93% accuracy.',
     image: 'https://images.unsplash.com/photo-1618069174551-90141d7d4e7f?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85&w=900',
+    issues: ['slouch'],
+  },
+  {
+    id: 6,
+    name: 'Shoulder Blade Squeeze',
+    subtitle: 'Scapular Stabilization',
+    duration: 90,
+    target: '15 Reps',
+    tip: 'Squeeze shoulder blades together, hold for 3 seconds, then release.',
+    sensor: 'Scapular sensor at 90% accuracy.',
+    image: 'https://images.pexels.com/photos/4498606/pexels-photo-4498606.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940',
+    issues: ['shoulder_asymmetry', 'slouch'],
+  },
+  {
+    id: 7,
+    name: 'Thoracic Rotation',
+    subtitle: 'Spinal Mobility Drill',
+    duration: 90,
+    target: '10 each side',
+    tip: 'Sit upright, rotate upper body slowly to each side while keeping hips still.',
+    sensor: 'Thoracic sensor at 88% accuracy.',
+    image: 'https://images.pexels.com/photos/4056535/pexels-photo-4056535.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940',
+    issues: ['slouch', 'lateral_tilt'],
+  },
+  {
+    id: 8,
+    name: 'Wall Angels',
+    subtitle: 'Postural Correction Protocol',
+    duration: 120,
+    target: '12 Reps',
+    tip: 'Stand flat against a wall, slide arms up and down keeping contact with the wall.',
+    sensor: 'Alignment sensor at 91% accuracy.',
+    image: 'https://images.pexels.com/photos/6456300/pexels-photo-6456300.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940',
+    issues: ['forward_head', 'shoulder_asymmetry', 'screen_distance'],
+  },
+  {
+    id: 9,
+    name: 'Chest Opener Stretch',
+    subtitle: 'Anterior Chain Release',
+    duration: 90,
+    target: '30s hold x3',
+    tip: 'Clasp hands behind back, lift chest and gently pull arms back.',
+    sensor: 'Pectoral sensor at 92% accuracy.',
+    image: 'https://images.pexels.com/photos/4498151/pexels-photo-4498151.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940',
+    issues: ['forward_head', 'screen_distance', 'slouch'],
+  },
+  {
+    id: 10,
+    name: 'Neck Isometrics',
+    subtitle: 'Cervical Stability Training',
+    duration: 90,
+    target: '10s hold x6',
+    tip: 'Press head against hand in each direction without moving. Hold steady.',
+    sensor: 'Neck sensor at 93% accuracy.',
+    image: 'https://images.pexels.com/photos/5473186/pexels-photo-5473186.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940',
+    issues: ['lateral_tilt', 'forward_head'],
   },
 ]
+
+// Default exercise set (used when no session data available)
+const DEFAULT_EXERCISES = EXERCISE_POOL.slice(0, 5)
+
+/**
+ * Select exercises based on session posture issues.
+ * Prioritizes exercises that target the most frequent issues.
+ */
+function selectExercises(sessionReport, poolSize = 5) {
+  if (!sessionReport?.metrics?.worstPeriods?.length) return DEFAULT_EXERCISES
+
+  // Tally issue frequencies from worst periods
+  const issueCounts = {}
+  for (const wp of sessionReport.metrics.worstPeriods) {
+    if (wp.issue) {
+      issueCounts[wp.issue] = (issueCounts[wp.issue] || 0) + 1
+    }
+  }
+
+  // Also consider Claude analysis issues if available
+  const claudeIssues = sessionReport.claude_analysis?.issues || []
+  for (const ci of claudeIssues) {
+    const key = ci.type || ci.issue
+    if (key) issueCounts[key] = (issueCounts[key] || 0) + 2 // Weight Claude issues higher
+  }
+
+  if (Object.keys(issueCounts).length === 0) return DEFAULT_EXERCISES
+
+  // Rank issues by frequency
+  const rankedIssues = Object.entries(issueCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([issue]) => issue)
+
+  // Score each exercise by how well it matches top issues
+  const scored = EXERCISE_POOL.map(ex => {
+    let score = 0
+    for (let i = 0; i < rankedIssues.length; i++) {
+      if (ex.issues.includes(rankedIssues[i])) {
+        score += (rankedIssues.length - i) // Higher rank = more points
+      }
+    }
+    return { ...ex, _score: score }
+  })
+
+  // Sort by score descending, pick top N
+  scored.sort((a, b) => b._score - a._score)
+  const selected = scored.slice(0, poolSize)
+
+  // If we got fewer matches than poolSize, fill with defaults
+  if (selected.length < poolSize) {
+    for (const ex of DEFAULT_EXERCISES) {
+      if (selected.length >= poolSize) break
+      if (!selected.find(s => s.id === ex.id)) selected.push(ex)
+    }
+  }
+
+  return selected
+}
 
 const AFFIRMING_QUOTES = [
   'Your body is a temple, treat it with neural precision.',
@@ -101,7 +219,7 @@ function TopHeader({ title = 'PostureGuard', subTitle = '', user = null, onSignI
         <div className="flex items-center gap-6">
           <div className="hidden md:flex items-center gap-8">
             <span className="font-label text-xs uppercase tracking-widest text-vs-primary cursor-pointer">Flow</span>
-            <span className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Insights</span>
+            <a href="/dashboard" className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Insights</a>
             <span className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Biometrics</span>
           </div>
           {user ? (
@@ -305,25 +423,90 @@ function IntroScreen({ onStart, user, sessionReport, onSignIn, onSignOut }) {
               </div>
 
               {/* Metrics */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
-                  <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Posture Score</span>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="font-headline text-3xl font-bold text-vs-primary">{sessionReport?.avg_score ?? 78}%</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4CD7F6" strokeWidth="2.5">
-                      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" />
+              {sessionReport ? (
+                <>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
+                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Posture Score</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="font-headline text-3xl font-bold text-vs-primary">{sessionReport.avg_score != null ? `${sessionReport.avg_score}%` : '--'}</span>
+                        {sessionReport.avg_score != null && (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4CD7F6" strokeWidth="2.5">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" />
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+                    <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
+                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Head Tilt</span>
+                      <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">{sessionReport.metrics?.avgHeadTilt != null ? `${Math.round(sessionReport.metrics.avgHeadTilt)}°` : '--'}</span>
+                    </div>
+                    <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
+                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Slouch Angle</span>
+                      <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">{sessionReport.metrics?.avgSlouchAngle != null ? `${sessionReport.metrics.avgSlouchAngle.toFixed(1)}°` : '--'}</span>
+                    </div>
+                  </div>
+
+                  {/* Enhanced Metrics */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
+                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Upright Time</span>
+                      <span className={`font-headline text-3xl font-bold mt-1 ${
+                        sessionReport.metrics?.uprightPercent == null ? 'text-vs-on-surface-variant' :
+                        sessionReport.metrics.uprightPercent >= 70 ? 'text-green-400' :
+                        sessionReport.metrics.uprightPercent >= 50 ? 'text-yellow-400' : 'text-red-400'
+                      }`}>{sessionReport.metrics?.uprightPercent != null ? `${Math.round(sessionReport.metrics.uprightPercent)}%` : '--'}</span>
+                    </div>
+                    <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
+                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Slouch Events</span>
+                      <span className={`font-headline text-3xl font-bold mt-1 ${
+                        sessionReport.metrics?.slouchEventCount == null ? 'text-vs-on-surface-variant' :
+                        sessionReport.metrics.slouchEventCount <= 2 ? 'text-green-400' :
+                        sessionReport.metrics.slouchEventCount <= 5 ? 'text-yellow-400' : 'text-red-400'
+                      }`}>{sessionReport.metrics?.slouchEventCount ?? '--'}</span>
+                    </div>
+                    <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
+                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Session Trend</span>
+                      <span className={`font-headline text-3xl font-bold mt-1 ${
+                        sessionReport.metrics?.postureTrend == null ? 'text-vs-on-surface-variant' :
+                        sessionReport.metrics.postureTrend < -2 ? 'text-green-400' :
+                        sessionReport.metrics.postureTrend > 2 ? 'text-red-400' : 'text-vs-primary'
+                      }`}>{
+                        sessionReport.metrics?.postureTrend == null ? '--' :
+                        sessionReport.metrics.postureTrend < -2 ? 'Improved' :
+                        sessionReport.metrics.postureTrend > 2 ? 'Declined' : 'Steady'
+                      }</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
+                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Shoulder Health</span>
+                      <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">{sessionReport.metrics?.avgShoulderAngle != null ? `${Math.abs(sessionReport.metrics.avgShoulderAngle).toFixed(1)}°` : '--'}</span>
+                    </div>
+                    <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
+                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Best Streak</span>
+                      <span className="font-headline text-3xl font-bold text-vs-primary mt-1">{(() => {
+                        const s = sessionReport.metrics?.longestGoodStreak;
+                        if (s == null) return '--';
+                        const m = Math.floor(s / 60);
+                        const sec = Math.round(s % 60);
+                        return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+                      })()}</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-vs-primary/10 flex items-center justify-center">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4CD7F6" strokeWidth="1.5">
+                      <path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M20 12a8 8 0 0 0-8-8v8h8z"/>
                     </svg>
                   </div>
+                  <p className="font-body text-sm text-vs-on-surface-variant max-w-xs">
+                    No sessions yet. Complete a posture monitoring session in the extension to see your metrics here.
+                  </p>
                 </div>
-                <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
-                  <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Head Tilt</span>
-                  <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">{sessionReport?.metrics?.avgHeadTilt ? Math.round(sessionReport.metrics.avgHeadTilt) : 12}°</span>
-                </div>
-                <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
-                  <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Slouch Angle</span>
-                  <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">{sessionReport?.metrics?.avgSlouchAngle ? sessionReport.metrics.avgSlouchAngle.toFixed(1) : '4.5'}°</span>
-                </div>
-              </div>
+              )}
 
               {/* Neural Stream Viz */}
               <div className="w-full h-24 rounded-xl bg-vs-surface-low flex items-end justify-center overflow-hidden relative px-4 pb-3 pt-2">
@@ -656,7 +839,7 @@ function PausedScreen({ exercise, nextExercise, pausedSeconds, onResume, user, o
 }
 
 // ── Screen: COMPLETE ───────────────────────────────────────────────────────────
-function CompleteScreen({ sessionData, onReturn, userName, user, onSignOut }) {
+function CompleteScreen({ sessionData, exercises = DEFAULT_EXERCISES, onReturn, userName, user, onSignOut }) {
   const [phase, setPhase] = useState(0)
   // phase 0: quote only
   // phase 1: quote fades + session breakdown appears
@@ -740,7 +923,7 @@ function CompleteScreen({ sessionData, onReturn, userName, user, onSignOut }) {
               </div>
               <div>
                 <p className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant mb-1">Exercises</p>
-                <p className="font-headline text-2xl text-vs-tertiary">{sessionData?.exerciseCount || EXERCISES.length}<span className="text-sm ml-0.5">done</span></p>
+                <p className="font-headline text-2xl text-vs-tertiary">{sessionData?.exerciseCount || exercises.length}<span className="text-sm ml-0.5">done</span></p>
               </div>
               <div>
                 <p className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant mb-1">Neural Load</p>
@@ -750,7 +933,7 @@ function CompleteScreen({ sessionData, onReturn, userName, user, onSignOut }) {
 
             {/* Exercises done list */}
             <div className="border-t border-vs-outline-variant/10 pt-5 space-y-3">
-              {EXERCISES.map((ex, i) => (
+              {exercises.map((ex, i) => (
                 <div key={ex.id} className="flex items-center gap-3">
                   <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: 'rgba(76,215,246,0.15)' }}>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4CD7F6" strokeWidth="3">
@@ -763,13 +946,19 @@ function CompleteScreen({ sessionData, onReturn, userName, user, onSignOut }) {
               ))}
             </div>
 
-            <div className="border-t border-vs-outline-variant/10 pt-5 mt-4">
+            <div className="border-t border-vs-outline-variant/10 pt-5 mt-4 flex flex-col gap-3">
               <button
                 onClick={onReturn}
                 className="w-full font-body text-sm text-vs-primary hover:text-vs-on-surface transition-colors uppercase tracking-widest"
               >
                 Return to Home
               </button>
+              <a
+                href="/dashboard"
+                className="w-full font-body text-sm text-vs-on-surface-variant hover:text-vs-primary transition-colors uppercase tracking-widest text-center"
+              >
+                View All Sessions
+              </a>
             </div>
           </div>
 
@@ -786,7 +975,7 @@ function CompleteScreen({ sessionData, onReturn, userName, user, onSignOut }) {
 export default function App() {
   const [screen, setScreen] = useState('intro')
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
-  const [timeLeft, setTimeLeft] = useState(EXERCISES[0].duration)
+  const [timeLeft, setTimeLeft] = useState(DEFAULT_EXERCISES[0].duration)
   const [pausedSeconds, setPausedSeconds] = useState(0)
   const [sessionStartTime] = useState(Date.now())
 
@@ -796,6 +985,9 @@ export default function App() {
   const [sessionError, setSessionError] = useState(null)
   const [pendingSessionId, setPendingSessionId] = useState(null)
   const supabaseRef = useRef(null)
+
+  // ── Adaptive Exercises ──
+  const exercises = useMemo(() => selectExercises(sessionReport), [sessionReport])
 
   // Initialize Supabase + check auth
   useEffect(() => {
@@ -822,32 +1014,47 @@ export default function App() {
 
   // Load session data AFTER user is authenticated
   useEffect(() => {
-    if (!user || !pendingSessionId) return
+    if (!user) return
     if (sessionReport) return // Already loaded
 
     const loadSession = async () => {
       try {
         const supabase = supabaseRef.current
         const { data: { session: authSession } } = await supabase.auth.getSession()
+        if (!authSession) return
 
-        const response = await fetch(`/api/sessions/${pendingSessionId}`, {
-          headers: authSession ? { 'Authorization': `Bearer ${authSession.access_token}` } : {}
-        })
-        const data = await response.json()
+        if (pendingSessionId) {
+          // Load specific session from URL param
+          const response = await fetch(`/api/sessions/${pendingSessionId}`, {
+            headers: { 'Authorization': `Bearer ${authSession.access_token}` }
+          })
+          const data = await response.json()
 
-        if (response.ok && data.session) {
-          setSessionReport(data.session)
-          setSessionError(null)
-        } else if (data.ownerMismatch) {
-          setSessionError('This session belongs to a different account. Please sign in with the account you used in the extension.')
-        } else if (data.requiresAuth) {
-          setSessionError('Please sign in to view this session.')
+          if (response.ok && data.session) {
+            setSessionReport(data.session)
+            setSessionError(null)
+          } else if (data.ownerMismatch) {
+            setSessionError('This session belongs to a different account. Please sign in with the account you used in the extension.')
+          } else if (data.requiresAuth) {
+            setSessionError('Please sign in to view this session.')
+          } else {
+            setSessionError('Session not found.')
+          }
         } else {
-          setSessionError('Session not found.')
+          // No specific session — load the most recent one
+          const response = await fetch('/api/sessions', {
+            headers: { 'Authorization': `Bearer ${authSession.access_token}` }
+          })
+          if (response.ok) {
+            const { sessions } = await response.json()
+            if (sessions && sessions.length > 0) {
+              setSessionReport(sessions[0])
+            }
+          }
         }
       } catch (err) {
         console.warn('Failed to load session:', err)
-        setSessionError('Failed to load session data.')
+        if (pendingSessionId) setSessionError('Failed to load session data.')
       }
     }
 
@@ -872,8 +1079,8 @@ export default function App() {
 
   const userName = user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || null
 
-  const currentExercise = EXERCISES[currentExerciseIndex]
-  const nextExercise = EXERCISES[currentExerciseIndex + 1] || null
+  const currentExercise = exercises[currentExerciseIndex]
+  const nextExercise = exercises[currentExerciseIndex + 1] || null
 
   // ── Session Timer (counts down during 'session') ──
   useEffect(() => {
@@ -890,14 +1097,14 @@ export default function App() {
   useEffect(() => {
     if (screen !== 'session' || timeLeft > 0) return
 
-    if (currentExerciseIndex < EXERCISES.length - 1) {
+    if (currentExerciseIndex < exercises.length - 1) {
       const nextIdx = currentExerciseIndex + 1
       setCurrentExerciseIndex(nextIdx)
-      setTimeLeft(EXERCISES[nextIdx].duration)
+      setTimeLeft(exercises[nextIdx].duration)
     } else {
       setScreen('complete')
     }
-  }, [timeLeft, screen, currentExerciseIndex])
+  }, [timeLeft, screen, currentExerciseIndex, exercises])
 
   // ── Pause Timer (counts up during 'paused') ──
   useEffect(() => {
@@ -917,9 +1124,9 @@ export default function App() {
 
   const handleCountdownComplete = useCallback(() => {
     setCurrentExerciseIndex(0)
-    setTimeLeft(EXERCISES[0].duration)
+    setTimeLeft(exercises[0].duration)
     setScreen('session')
-  }, [])
+  }, [exercises])
 
   const handlePause = useCallback(() => {
     setPausedSeconds(0)
@@ -931,33 +1138,33 @@ export default function App() {
   }, [])
 
   const handleSkipNext = useCallback(() => {
-    if (currentExerciseIndex < EXERCISES.length - 1) {
+    if (currentExerciseIndex < exercises.length - 1) {
       const nextIdx = currentExerciseIndex + 1
       setCurrentExerciseIndex(nextIdx)
-      setTimeLeft(EXERCISES[nextIdx].duration)
+      setTimeLeft(exercises[nextIdx].duration)
     } else {
       setScreen('complete')
     }
-  }, [currentExerciseIndex])
+  }, [currentExerciseIndex, exercises])
 
   const handleSkipPrev = useCallback(() => {
     if (currentExerciseIndex > 0) {
       const prevIdx = currentExerciseIndex - 1
       setCurrentExerciseIndex(prevIdx)
-      setTimeLeft(EXERCISES[prevIdx].duration)
+      setTimeLeft(exercises[prevIdx].duration)
     }
-  }, [currentExerciseIndex])
+  }, [currentExerciseIndex, exercises])
 
   const handleReturn = useCallback(() => {
     setScreen('intro')
     setCurrentExerciseIndex(0)
-    setTimeLeft(EXERCISES[0].duration)
+    setTimeLeft(exercises[0].duration)
     setPausedSeconds(0)
-  }, [])
+  }, [exercises])
 
   const sessionData = {
     activeTime: Math.round((Date.now() - sessionStartTime) / 60000),
-    exerciseCount: EXERCISES.length,
+    exerciseCount: exercises.length,
   }
 
   // ── Render ──
@@ -1015,7 +1222,7 @@ export default function App() {
         <SessionScreen
           exercise={currentExercise}
           exerciseIndex={currentExerciseIndex}
-          totalExercises={EXERCISES.length}
+          totalExercises={exercises.length}
           timeLeft={timeLeft}
           onPause={handlePause}
           onSkipNext={handleSkipNext}
@@ -1037,6 +1244,7 @@ export default function App() {
       {screen === 'complete' && (
         <CompleteScreen
           sessionData={sessionData}
+          exercises={exercises}
           onReturn={handleReturn}
           userName={userName}
           user={user}

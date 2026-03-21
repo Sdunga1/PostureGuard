@@ -23,11 +23,21 @@ const ROLLING_WINDOW_MS = 30000;
 const SESSION_DURATION_MS = 1 * 60 * 1000; // 1 minute per session (dev/testing mode)
 
 // Landmark indices (Human.js / MediaPipe Face Mesh)
+// Face mesh landmark indices (Human.js / MediaPipe)
 const NOSE_TIP = 1;
 const LEFT_EYE = 33;
 const RIGHT_EYE = 362;
 const CHIN = 152;
 const FOREHEAD = 10;
+
+// MoveNet body keypoint indices
+const BODY_LEFT_EAR = 3;
+const BODY_RIGHT_EAR = 4;
+const BODY_LEFT_SHOULDER = 5;
+const BODY_RIGHT_SHOULDER = 6;
+const BODY_LEFT_HIP = 11;
+const BODY_RIGHT_HIP = 12;
+const BODY_CONFIDENCE_MIN = 0.3;
 
 let calibration = null;         // Loaded from chrome.storage postureCalV1
 let activeTabId = null;         // Which tab is currently running camera
@@ -35,13 +45,20 @@ let recentFrames = [];          // Rolling window of metric snapshots
 let badPostureStart = null;
 let alertTriggered = false;
 let lastScoreBroadcast = 0;
+let currentGoodStreakStart = null;  // Tracks consecutive good posture periods
+let currentSlouchStart = null;     // Tracks distinct slouch events (score < 50)
+let slouchConfirmed = false;       // True after 10s of continuous bad posture
+let lastBodyMetricTs = 0;          // Throttle body metric sampling
 
 // Global session (persists across tab switches)
 let session = {
   startTime: null,
   scores: [],
   alerts: [],
-  worstPeriods: []
+  worstPeriods: [],
+  bodyMetrics: [],      // Sampled body keypoint metrics (~1/sec)
+  slouchEvents: [],     // Distinct slouch episodes {start, end, duration, avgScore}
+  goodStreakMax: 0       // Longest consecutive good posture (ms)
 };
 
 // Rate limiting for Claude API calls
@@ -180,9 +197,63 @@ function calculateMetrics(landmarks, ts) {
   return { forwardTilt, lateralTilt, faceSize, screenDistance, ts };
 }
 
+/**
+ * Extract body-level metrics from MoveNet keypoints.
+ * Returns null if required keypoints are missing or low confidence.
+ */
+function calculateBodyMetrics(bodyKeypoints, ts) {
+  if (!bodyKeypoints || !Array.isArray(bodyKeypoints)) return null;
+
+  // Helper to safely read a keypoint's position
+  function kpXY(index) {
+    const kp = bodyKeypoints[index];
+    if (!kp || (kp.score || 0) < BODY_CONFIDENCE_MIN) return null;
+    const x = kp.position ? kp.position[0] : kp.x;
+    const y = kp.position ? kp.position[1] : kp.y;
+    if (x === undefined || y === undefined) return null;
+    return { x, y };
+  }
+
+  const lShoulder = kpXY(BODY_LEFT_SHOULDER);
+  const rShoulder = kpXY(BODY_RIGHT_SHOULDER);
+  if (!lShoulder || !rShoulder) return null; // Shoulders required
+
+  // Shoulder angle — deviation from horizontal (degrees)
+  const shoulderAngle = Math.atan2(
+    rShoulder.y - lShoulder.y,
+    rShoulder.x - lShoulder.x
+  ) * (180 / Math.PI);
+
+  // Shoulder elevation — avg ear-to-shoulder distance (shrug detection)
+  let shoulderElevation = null;
+  const lEar = kpXY(BODY_LEFT_EAR);
+  const rEar = kpXY(BODY_RIGHT_EAR);
+  if (lEar && rEar) {
+    const leftDist = Math.sqrt(
+      Math.pow(lEar.x - lShoulder.x, 2) + Math.pow(lEar.y - lShoulder.y, 2)
+    );
+    const rightDist = Math.sqrt(
+      Math.pow(rEar.x - rShoulder.x, 2) + Math.pow(rEar.y - rShoulder.y, 2)
+    );
+    shoulderElevation = (leftDist + rightDist) / 2;
+  }
+
+  // Trunk lateral lean — horizontal offset between shoulder midpoint and hip midpoint
+  let trunkLean = null;
+  const lHip = kpXY(BODY_LEFT_HIP);
+  const rHip = kpXY(BODY_RIGHT_HIP);
+  if (lHip && rHip) {
+    const shoulderMidX = (lShoulder.x + rShoulder.x) / 2;
+    const hipMidX = (lHip.x + rHip.x) / 2;
+    trunkLean = shoulderMidX - hipMidX; // Positive = leaning right
+  }
+
+  return { shoulderAngle, shoulderElevation, trunkLean, ts };
+}
+
 let scoreLogCounter = 0;
 
-function computeScore(metrics) {
+function computeScore(metrics, bodyMetrics) {
   if (!calibration) return null; // No score without calibration
 
   // Forward head tilt deviation (more sensitive multiplier)
@@ -207,27 +278,62 @@ function computeScore(metrics) {
     ? Math.min(100, (1 - distRatio) * 250)
     : 0;
 
+  // Body metrics (optional — only when keypoints + calibration available)
+  const hasBodyCal = calibration.shoulderAngle !== undefined && calibration.shoulderAngle !== null;
+  let shoulderScore = 0;
+  let shrugScore = 0;
+  let useBodyWeights = false;
+
+  if (bodyMetrics && hasBodyCal) {
+    // Shoulder asymmetry — deviation from calibrated angle
+    const shoulderDev = Math.abs(bodyMetrics.shoulderAngle - calibration.shoulderAngle);
+    shoulderScore = Math.min(100, shoulderDev * 20); // 5° = full penalty
+
+    // Shrug detection — ear-to-shoulder distance shrink
+    if (bodyMetrics.shoulderElevation !== null && calibration.shoulderElevation) {
+      const elevDev = Math.abs(bodyMetrics.shoulderElevation - calibration.shoulderElevation);
+      shrugScore = Math.min(100,
+        elevDev / Math.max(calibration.shoulderElevation, 0.01) * 150
+      );
+    }
+
+    useBodyWeights = true;
+  }
+
   // Weighted average (higher = worse posture)
-  const raw = (forwardScore * 0.35) + (lateralScore * 0.2) +
-              (slouchScore * 0.3) + (distanceScore * 0.15);
+  let raw;
+  if (useBodyWeights) {
+    // Rebalanced: forward 30%, slouch 25%, lateral 20%, shoulder 10%, distance 10%, shrug 5%
+    raw = (forwardScore * 0.30) + (lateralScore * 0.20) +
+          (slouchScore * 0.25) + (distanceScore * 0.10) +
+          (shoulderScore * 0.10) + (shrugScore * 0.05);
+  } else {
+    // Original weights (no body data)
+    raw = (forwardScore * 0.35) + (lateralScore * 0.2) +
+          (slouchScore * 0.3) + (distanceScore * 0.15);
+  }
 
   const score = Math.max(0, Math.min(100, Math.round(100 - raw)));
 
   // Log periodically for debugging
   scoreLogCounter++;
   if (scoreLogCounter % 60 === 1) {
+    const bodyLog = useBodyWeights
+      ? '| shldr:' + shoulderScore.toFixed(1) + ' | shrug:' + shrugScore.toFixed(1)
+      : '| body:off';
     console.log('[PostureGuard BG] Score:', score,
       '| fwd:', forwardScore.toFixed(1),
       '| lat:', lateralScore.toFixed(1),
       '| slouch:', slouchScore.toFixed(1),
       '| dist:', distanceScore.toFixed(1),
+      bodyLog,
       '| raw:', raw.toFixed(1));
   }
 
   return score;
 }
 
-function processFrame(landmarks, ts, tabId) {
+function processFrame(landmarks, bodyKeypoints, ts, tabId) {
   if (sessionEnding) return; // Session is ending, ignore new frames
 
   if (!session.startTime) session.startTime = Date.now();
@@ -284,17 +390,25 @@ function processFrame(landmarks, ts, tabId) {
   const metrics = calculateMetrics(landmarks, ts);
   if (!metrics) return;
 
+  const bodyMetrics = calculateBodyMetrics(bodyKeypoints, ts);
+
   // Rolling window
-  recentFrames.push({ metrics, ts });
+  recentFrames.push({ metrics, bodyMetrics, ts });
   const cutoff = ts - ROLLING_WINDOW_MS;
   recentFrames = recentFrames.filter(f => f.ts > cutoff);
 
-  const score = computeScore(metrics);
+  // Sample body metrics (~1/sec, same throttle as score broadcast)
+  if (bodyMetrics && (ts - lastBodyMetricTs > SCORE_BROADCAST_INTERVAL_MS)) {
+    lastBodyMetricTs = ts;
+    session.bodyMetrics.push(bodyMetrics);
+  }
+
+  const score = computeScore(metrics, bodyMetrics);
   if (score === null) return; // No calibration yet — don't score or broadcast
 
   session.scores.push(score);
 
-  // Alert logic
+  // ── Alert logic ──
   if (score < 50) {
     if (!badPostureStart) badPostureStart = ts;
 
@@ -309,16 +423,62 @@ function processFrame(landmarks, ts, tabId) {
     if (badPostureStart && alertTriggered) {
       const frameDuration = 33;
       const frameCount = Math.max(1, Math.floor((ts - badPostureStart) / frameDuration));
+      const avgScore = Math.round(
+        session.scores.slice(-frameCount).reduce((a, b) => a + b, 0) / frameCount
+      ) || score;
+
+      // Determine dominant issue during this bad period
+      const recentBad = recentFrames.filter(f => f.ts >= badPostureStart && f.ts <= ts);
+      const issue = detectDominantIssue(recentBad);
+
       session.worstPeriods.push({
         start: badPostureStart,
         end: ts,
-        score: Math.round(
-          session.scores.slice(-frameCount).reduce((a, b) => a + b, 0) / frameCount
-        ) || score
+        score: avgScore,
+        issue: issue
       });
     }
     badPostureStart = null;
     alertTriggered = false;
+  }
+
+  // ── Slouch event tracking (distinct from alert-based worstPeriods) ──
+  if (score < 50) {
+    if (!currentSlouchStart) currentSlouchStart = ts;
+    // Confirm slouch after 10 seconds of continuous bad posture
+    if (!slouchConfirmed && (ts - currentSlouchStart) > 10000) {
+      slouchConfirmed = true;
+    }
+  } else if (score >= 60) {
+    // Exited slouch — record event if it was confirmed (>10s)
+    if (currentSlouchStart && slouchConfirmed) {
+      const slouchScores = session.scores.slice(
+        -Math.max(1, Math.floor((ts - currentSlouchStart) / 33))
+      );
+      session.slouchEvents.push({
+        start: currentSlouchStart,
+        end: ts,
+        duration: Math.round((ts - currentSlouchStart) / 1000),
+        avgScore: slouchScores.length > 0
+          ? Math.round(slouchScores.reduce((a, b) => a + b, 0) / slouchScores.length)
+          : score
+      });
+    }
+    currentSlouchStart = null;
+    slouchConfirmed = false;
+  }
+
+  // ── Good streak tracking ──
+  if (score >= 70) {
+    if (!currentGoodStreakStart) currentGoodStreakStart = ts;
+  } else {
+    if (currentGoodStreakStart) {
+      const streakMs = ts - currentGoodStreakStart;
+      if (streakMs > session.goodStreakMax) {
+        session.goodStreakMax = streakMs;
+      }
+      currentGoodStreakStart = null;
+    }
   }
 
   // Broadcast score (throttled)
@@ -343,15 +503,99 @@ function processFrame(landmarks, ts, tabId) {
   }
 }
 
+/**
+ * Determine which metric contributed most to a bad posture period.
+ * Looks at recent frames and finds the metric with the highest deviation.
+ */
+function detectDominantIssue(frames) {
+  if (!frames.length || !calibration) return 'unknown';
+
+  let maxDev = 0;
+  let dominant = 'forward_head';
+
+  const avgForward = average(frames.map(f => f.metrics.forwardTilt));
+  const avgLateral = average(frames.map(f => f.metrics.lateralTilt));
+  const avgFaceSize = average(frames.map(f => f.metrics.faceSize));
+  const avgScreenDist = average(frames.map(f => f.metrics.screenDistance));
+
+  const forwardDev = Math.abs(avgForward - calibration.forwardTilt) /
+    Math.max(Math.abs(calibration.forwardTilt), 0.01);
+  if (forwardDev > maxDev) { maxDev = forwardDev; dominant = 'forward_head'; }
+
+  const lateralDev = Math.abs(avgLateral - calibration.lateralTilt) * 0.1;
+  if (lateralDev > maxDev) { maxDev = lateralDev; dominant = 'lateral_tilt'; }
+
+  const slouchDev = Math.abs(avgFaceSize - calibration.faceSize) /
+    Math.max(Math.abs(calibration.faceSize), 0.01);
+  if (slouchDev > maxDev) { maxDev = slouchDev; dominant = 'slouch'; }
+
+  const distRatio = avgScreenDist / Math.max(calibration.screenDistance, 0.01);
+  const distDev = distRatio < 0.75 ? (1 - distRatio) : 0;
+  if (distDev > maxDev) { maxDev = distDev; dominant = 'screen_distance'; }
+
+  // Check shoulder if body data available
+  const bodyFrames = frames.filter(f => f.bodyMetrics);
+  if (bodyFrames.length > 0 && calibration.shoulderAngle !== undefined) {
+    const avgShoulder = average(bodyFrames.map(f => f.bodyMetrics.shoulderAngle));
+    const shoulderDev = Math.abs(avgShoulder - calibration.shoulderAngle) * 0.15;
+    if (shoulderDev > maxDev) { dominant = 'shoulder_asymmetry'; }
+  }
+
+  return dominant;
+}
+
 function getSessionData() {
   const now = Date.now();
   const duration = session.startTime ? Math.round((now - session.startTime) / 1000) : 0;
-  const avgScore = session.scores.length > 0
-    ? Math.round(session.scores.reduce((a, b) => a + b, 0) / session.scores.length)
+  const scores = session.scores;
+  const avgScore = scores.length > 0
+    ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+    : 0;
+
+  // Close any open good streak
+  let goodStreakMax = session.goodStreakMax;
+  if (currentGoodStreakStart) {
+    const openStreak = performance.now() - currentGoodStreakStart;
+    if (openStreak > goodStreakMax) goodStreakMax = openStreak;
+  }
+
+  // Upright percentage (score >= 70)
+  const uprightCount = scores.filter(s => s >= 70).length;
+  const uprightPercent = scores.length > 0
+    ? Math.round((uprightCount / scores.length) * 100)
+    : 0;
+
+  // Posture trend — first half avg vs second half avg (positive = declined)
+  let postureTrend = 0;
+  if (scores.length >= 10) {
+    const mid = Math.floor(scores.length / 2);
+    const firstHalf = scores.slice(0, mid);
+    const secondHalf = scores.slice(mid);
+    const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
+    const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
+    postureTrend = Math.round(firstAvg - secondAvg); // Positive = got worse
+  }
+
+  // Body metric averages (from sampled data)
+  const bm = session.bodyMetrics;
+  const avgShoulderAngle = bm.length > 0
+    ? average(bm.map(m => m.shoulderAngle))
+    : null;
+  const avgShoulderElevation = bm.length > 0
+    ? average(bm.filter(m => m.shoulderElevation !== null).map(m => m.shoulderElevation))
+    : null;
+  const avgTrunkLean = bm.filter(m => m.trunkLean !== null).length > 0
+    ? average(bm.filter(m => m.trunkLean !== null).map(m => m.trunkLean))
+    : null;
+
+  // Slouch event stats
+  const slouchEvents = session.slouchEvents.slice(0, 5);
+  const avgSlouchDuration = session.slouchEvents.length > 0
+    ? Math.round(session.slouchEvents.reduce((a, e) => a + e.duration, 0) / session.slouchEvents.length)
     : 0;
 
   return {
-    version: 1,
+    version: 2,
     sessionId: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2),
     startTime: session.startTime ? new Date(session.startTime).toISOString() : null,
     endTime: new Date(now).toISOString(),
@@ -362,17 +606,35 @@ function getSessionData() {
       avgSlouchAngle: average(recentFrames.map(f => f.metrics.forwardTilt)),
       avgScreenDistance: average(recentFrames.map(f => f.metrics.screenDistance)),
       alertCount: session.alerts.length,
-      worstPeriods: session.worstPeriods.slice(0, 5)
+      worstPeriods: session.worstPeriods.slice(0, 5),
+      // Behavioral metrics
+      uprightPercent,
+      slouchEventCount: session.slouchEvents.length,
+      slouchEvents,
+      avgSlouchDuration,
+      longestGoodStreak: Math.round(goodStreakMax / 1000),
+      postureTrend,
+      // Body metrics
+      avgShoulderAngle,
+      avgShoulderElevation,
+      avgTrunkLean
     }
   };
 }
 
 function resetSession() {
-  session = { startTime: null, scores: [], alerts: [], worstPeriods: [] };
+  session = {
+    startTime: null, scores: [], alerts: [], worstPeriods: [],
+    bodyMetrics: [], slouchEvents: [], goodStreakMax: 0
+  };
   recentFrames = [];
   badPostureStart = null;
   alertTriggered = false;
   sessionEnding = false;
+  currentGoodStreakStart = null;
+  currentSlouchStart = null;
+  slouchConfirmed = false;
+  lastBodyMetricTs = 0;
 }
 
 function average(arr) {
@@ -388,7 +650,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // Central frame processing — only accept frames from the owner tab
       if (sender.tab?.id && sender.tab.id === ownerTabId) {
         activeTabId = sender.tab.id;
-        processFrame(message.landmarks, message.ts, sender.tab.id);
+        processFrame(message.landmarks, message.bodyKeypoints || null, message.ts, sender.tab.id);
       }
       return false;
 
@@ -576,10 +838,13 @@ async function handleReportRequest(sessionData) {
 
   const systemPrompt = [
     'You are PostureGuard, an AI posture analyst.',
-    'Given a session\'s posture data, provide:',
+    'Given a session\'s posture data (which may include shoulder metrics, upright%, slouch events, and posture trend), provide:',
     '1. A 2-sentence summary of overall posture quality',
-    '2. Top 3 issues identified (with specific metrics)',
+    '2. Top 3 issues identified (reference specific metrics — e.g. upright%, shoulder angle, slouch events, trend)',
     '3. 3-5 recommended exercises with: name, reason, duration, priority (1=highest)',
+    '',
+    'Note: postureTrend > 0 means posture declined over the session (fatigue). uprightPercent is time with good posture.',
+    'worstPeriods include an "issue" field indicating the dominant problem (forward_head, lateral_tilt, slouch, screen_distance, shoulder_asymmetry).',
     '',
     'Respond in valid JSON:',
     '{"summary":"string","issues":["string"],"recommendations":[{"exercise":"string","reason":"string","duration":"string","priority":number}]}'

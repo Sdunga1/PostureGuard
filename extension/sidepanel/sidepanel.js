@@ -395,6 +395,7 @@
         userPaused = false;
         updateStatusUI('loading');
         sessionEnded = false;
+        lastSavedSessionUrl = null;
       }
 
       // Notify content script on active tab
@@ -607,12 +608,17 @@
             sessionResponse.data.claudeAnalysis = result.analysis;
           }
 
-          // Save session to cloud if logged in
+          // Save session to cloud if logged in (reuse auto-saved URL if available)
           let sessionUrl = null;
           let saveFailed = false;
           if (currentUser) {
-            sessionUrl = await postSessionToCloud(sessionResponse.data);
-            if (!sessionUrl) saveFailed = true;
+            if (lastSavedSessionUrl) {
+              sessionUrl = lastSavedSessionUrl;
+            } else {
+              sessionUrl = await postSessionToCloud(sessionResponse.data);
+              if (!sessionUrl) saveFailed = true;
+              else lastSavedSessionUrl = sessionUrl;
+            }
           }
 
           if (els.qrSection) els.qrSection.style.display = '';
@@ -734,6 +740,11 @@
       els.reportBtn.className = 'btn btn-report';
       els.reportBtn.textContent = 'Generate Report \u2192';
       els.reportBtn.disabled = false;
+    }
+
+    // Auto-save session to cloud if logged in
+    if (currentUser && sessionData) {
+      autoSaveSession(sessionData);
     }
   }
 
@@ -905,6 +916,30 @@
       }
     } catch (_e) {
       // Background not ready yet
+    }
+  }
+
+  // ─── Auto-Save Session to Cloud ─────────────────────────────────
+
+  let lastSavedSessionUrl = null;
+  let autoSaveInProgress = false;
+
+  async function autoSaveSession(sessionData) {
+    if (autoSaveInProgress || lastSavedSessionUrl) return;
+    autoSaveInProgress = true;
+    try {
+      const url = await postSessionToCloud(sessionData);
+      if (url) {
+        lastSavedSessionUrl = url;
+        const sessionH2 = els.sessionSection?.querySelector('h2');
+        if (sessionH2 && !sessionH2.textContent.includes('Saved')) {
+          sessionH2.textContent += ' \u2714 Saved';
+        }
+      }
+    } catch (err) {
+      console.warn('[PostureGuard] Auto-save failed:', err.message);
+    } finally {
+      autoSaveInProgress = false;
     }
   }
 
