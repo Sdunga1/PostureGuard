@@ -81,32 +81,80 @@
     return false;
   });
 
-  // ─── Warn before closing owner tab ───────────────────────────
+  // ─── Owner tab warning + banner ──────────────────────────────
 
   let isOwnerTab = false;
+  let bannerEl = null;
 
   function onBeforeUnload(e) {
     if (!isOwnerTab) return;
     e.preventDefault();
-    // Chrome requires returnValue to be set for the dialog to show
-    e.returnValue = 'PostureGuard is monitoring your posture. Close this tab?';
+    e.returnValue = '';
   }
 
-  // When this tab starts the camera, mark as owner and add warning
+  function showOwnerBanner() {
+    if (bannerEl) return;
+    bannerEl = document.createElement('div');
+    bannerEl.id = 'postureguard-owner-banner';
+    bannerEl.style.cssText = [
+      'position: fixed', 'top: 0', 'left: 0', 'right: 0',
+      'height: 32px', 'z-index: 2147483647',
+      'background: linear-gradient(90deg, #5b21b6, #7c3aed)',
+      'color: white', 'display: flex', 'align-items: center',
+      'justify-content: center', 'gap: 8px',
+      'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      'font-size: 12px', 'font-weight: 500',
+      'box-shadow: 0 2px 8px rgba(0,0,0,0.2)',
+      'letter-spacing: 0.3px'
+    ].join('; ');
+
+    // Green pulse dot
+    const dot = document.createElement('span');
+    dot.style.cssText = [
+      'width: 8px', 'height: 8px', 'border-radius: 50%',
+      'background: #52c41a', 'display: inline-block',
+      'animation: pg-pulse 2s ease-in-out infinite'
+    ].join('; ');
+
+    // Text
+    const text = document.createElement('span');
+    text.textContent = 'PostureGuard is monitoring \u2014 closing this tab will end your session';
+
+    bannerEl.appendChild(dot);
+    bannerEl.appendChild(text);
+
+    // Add pulse animation
+    const style = document.createElement('style');
+    style.id = 'pg-banner-style';
+    style.textContent = '@keyframes pg-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }';
+    document.documentElement.appendChild(style);
+    document.documentElement.appendChild(bannerEl);
+  }
+
+  function removeOwnerBanner() {
+    if (bannerEl && bannerEl.parentNode) {
+      bannerEl.parentNode.removeChild(bannerEl);
+      bannerEl = null;
+    }
+    const style = document.getElementById('pg-banner-style');
+    if (style) style.remove();
+  }
+
+  // When this tab starts monitoring, show banner + add close warning
   window.addEventListener('posture:status', (e) => {
     if (e.detail.phase === 'live' || e.detail.phase === 'ready') {
       isOwnerTab = true;
       window.addEventListener('beforeunload', onBeforeUnload);
-    } else if (e.detail.phase === 'loading' && !isOwnerTab) {
-      // Starting up — not owner yet
+      showOwnerBanner();
     }
   });
 
-  // When monitoring is disabled, remove the warning
+  // When monitoring is disabled, remove everything
   window.addEventListener('posture:toggle', (e) => {
     if (!e.detail.enabled) {
       isOwnerTab = false;
       window.removeEventListener('beforeunload', onBeforeUnload);
+      removeOwnerBanner();
     }
   });
 
