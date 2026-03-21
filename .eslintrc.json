@@ -1,0 +1,60 @@
+{
+  "env": {
+    "browser": true,
+    "webextensions": true,
+    "es2022": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "script"
+  },
+  "rules": {
+    "no-undef": "error",
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    "no-redeclare": "error",
+    "no-dupe-keys": "error",
+    "no-duplicate-case": "error",
+    "no-unreachable": "error",
+    "no-const-assign": "error",
+    "no-extra-semi": "warn",
+    "no-debugger": "error",
+    "no-alert": "warn",
+    "no-var": "error",
+    "prefer-const": "warn",
+    "eqeqeq": ["error", "always"],
+    "curly": ["warn", "multi-line"],
+    "semi": ["error", "always"],
+    "no-implicit-globals": "error",
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-new-func": "error",
+    "no-self-compare": "error",
+    "no-template-curly-in-string": "warn",
+    "no-loss-of-precision": "error"
+  },
+  "globals": {
+    "human": "readonly",
+    "Human": "readonly"
+  },
+  "overrides": [
+    {
+      "files": ["extension/posture/human/**/*.js"],
+      "rules": {
+        "no-undef": "off",
+        "no-unused-vars": "off"
+      }
+    },
+    {
+      "files": ["extension/background.js"],
+      "rules": {
+        "no-implicit-globals": "off"
+      }
+    },
+    {
+      "files": ["extension/utils/*.js"],
+      "rules": {
+        "no-implicit-globals": "off"
+      }
+    }
+  ]
+}
