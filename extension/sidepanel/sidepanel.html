@@ -8,17 +8,29 @@
 </head>
 <body>
   <div class="panel">
-    <!-- Header -->
+    <!-- Header with settings gear -->
     <header class="header">
-      <h1 class="logo">PostureGuard</h1>
-      <p class="tagline">AI-powered posture coaching</p>
+      <div class="header-top">
+        <div>
+          <h1 class="logo">PostureGuard</h1>
+          <p class="tagline">AI-powered posture coaching</p>
+        </div>
+        <button class="gear-btn" id="settings-gear-btn" title="Settings">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M8.33 2.5H11.67L12.08 4.58C12.5 4.75 12.88 4.98 13.23 5.25L15.25 4.5L16.92 7.38L15.33 8.83C15.37 9.05 15.38 9.28 15.38 9.5C15.38 9.72 15.37 9.95 15.33 10.17L16.92 11.62L15.25 14.5L13.23 13.75C12.88 14.02 12.5 14.25 12.08 14.42L11.67 16.5H8.33L7.92 14.42C7.5 14.25 7.12 14.02 6.77 13.75L4.75 14.5L3.08 11.62L4.67 10.17C4.63 9.95 4.62 9.72 4.62 9.5C4.62 9.28 4.63 9.05 4.67 8.83L3.08 7.38L4.75 4.5L6.77 5.25C7.12 4.98 7.5 4.75 7.92 4.58L8.33 2.5ZM10 7C8.62 7 7.5 8.12 7.5 9.5C7.5 10.88 8.62 12 10 12C11.38 12 12.5 10.88 12.5 9.5C12.5 8.12 11.38 7 10 7Z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
     </header>
 
     <!-- Main Toggle -->
     <section class="section">
       <div class="toggle-row">
         <label for="posture-toggle">Enable Monitoring</label>
-        <input type="checkbox" id="posture-toggle">
+        <label class="switch">
+          <input type="checkbox" id="posture-toggle">
+          <span class="slider"></span>
+        </label>
       </div>
       <div class="status-row">
         <span class="status-dot" id="status-dot"></span>
@@ -37,7 +49,7 @@
     <section class="section">
       <h2>Calibration</h2>
       <p class="hint">Sit in your ideal posture, then calibrate.</p>
-      <button id="calibrate-btn" class="btn btn-primary">Calibrate Position</button>
+      <button id="calibrate-btn" class="btn btn-primary" disabled>Calibrate Position</button>
       <span class="cal-status" id="cal-status">Not calibrated</span>
     </section>
 
@@ -51,7 +63,10 @@
       </div>
       <div class="toggle-row">
         <label for="debug-toggle">Debug Mode</label>
-        <input type="checkbox" id="debug-toggle">
+        <label class="switch switch-sm">
+          <input type="checkbox" id="debug-toggle">
+          <span class="slider"></span>
+        </label>
       </div>
     </section>
 
@@ -82,12 +97,21 @@
       <div id="qr-container"></div>
     </section>
 
-    <!-- API Key -->
-    <section class="section">
-      <h2>Claude API Key</h2>
-      <input type="password" id="api-key-input" placeholder="sk-ant-..." class="input">
-      <button id="save-key-btn" class="btn btn-small">Save</button>
-    </section>
+    <!-- Settings Panel (hidden by default) -->
+    <div class="settings-overlay" id="settings-overlay" style="display:none;">
+      <div class="settings-panel">
+        <div class="settings-header">
+          <h2>Settings</h2>
+          <button class="close-btn" id="settings-close-btn">&times;</button>
+        </div>
+        <div class="settings-body">
+          <label class="settings-label">Claude API Key</label>
+          <p class="hint">Required for AI-powered coaching messages and reports. Get your key from <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
+          <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." class="input">
+          <button id="save-key-btn" class="btn btn-primary" style="width:100%;">Save API Key</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="sidepanel.js"></script>

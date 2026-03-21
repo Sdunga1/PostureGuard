@@ -175,7 +175,8 @@
     if (phase === 'live') {
       ensureElements();
       if (indicatorEl) indicatorEl.classList.remove('hidden');
-    } else if (phase === 'loading') {
+    } else {
+      // Hide for loading, ready, error, disabled
       hideAll();
     }
   });
