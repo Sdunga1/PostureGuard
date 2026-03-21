@@ -278,11 +278,21 @@
 
   // ─── Event Listeners ──────────────────────────────────────────
 
-  window.addEventListener('posture:toggle', (e) => {
+  window.addEventListener('posture:toggle', async (e) => {
     if (e.detail.enabled) {
-      start();
+      // Check with background if we should own the camera
+      try {
+        const response = await chrome.runtime.sendMessage({ type: 'SHOULD_START_CAMERA' });
+        if (response && response.start) {
+          start();
+        }
+      } catch (_e) {
+        start();
+      }
     } else {
       stop();
+      // Tell background we released the camera
+      chrome.runtime.sendMessage({ type: 'CAMERA_RELEASED' }).catch(() => {});
     }
   });
 
@@ -290,10 +300,21 @@
     togglePreview();
   });
 
-  // Check initial state from storage
-  chrome.storage.local.get(['postureEnabled'], (result) => {
+  // Check if this tab should start the camera
+  // Only one tab runs the camera — ask background first
+  chrome.storage.local.get(['postureEnabled'], async (result) => {
     if (result.postureEnabled) {
-      start();
+      try {
+        const response = await chrome.runtime.sendMessage({ type: 'SHOULD_START_CAMERA' });
+        if (response && response.start) {
+          start();
+        } else {
+          console.log('[PostureGuard] Camera already running on another tab');
+        }
+      } catch (_e) {
+        // Background not ready, try starting anyway
+        start();
+      }
     }
   });
 

@@ -363,6 +363,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse(settings);
       return false;
 
+    case 'CAMERA_RELEASED':
+      // A tab stopped its camera (user disabled monitoring)
+      if (sender.tab?.id === cameraTabId) {
+        cameraTabId = null;
+        activeTabId = null;
+        console.log('[PostureGuard BG] Camera released by tab', sender.tab?.id);
+      }
+      return false;
+
+    case 'SHOULD_START_CAMERA':
+      // A tab asks: "should I start the camera?"
+      // Only if no other tab already has it running
+      if (!cameraTabId && settings.postureEnabled) {
+        sendResponse({ start: true });
+      } else if (cameraTabId === sender.tab?.id) {
+        // This tab already owns the camera — keep going
+        sendResponse({ start: true });
+      } else {
+        sendResponse({ start: false, cameraTab: cameraTabId });
+      }
+      return false;
+
     case 'POSTURE_STATUS_UPDATE':
       // Relay to side panel
       chrome.runtime.sendMessage({
