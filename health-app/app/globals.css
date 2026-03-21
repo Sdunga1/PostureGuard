@@ -1,0 +1,149 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 2%;
+    --foreground: 220 10% 90%;
+    --card: 215 20% 8%;
+    --card-foreground: 220 10% 90%;
+    --popover: 215 20% 8%;
+    --popover-foreground: 220 10% 90%;
+    --primary: 194 91% 63%;
+    --primary-foreground: 0 0% 2%;
+    --secondary: 215 15% 12%;
+    --secondary-foreground: 220 10% 90%;
+    --muted: 215 15% 12%;
+    --muted-foreground: 215 10% 55%;
+    --accent: 215 15% 15%;
+    --accent-foreground: 220 10% 90%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 215 15% 18%;
+    --input: 215 15% 18%;
+    --ring: 194 91% 63%;
+    --radius: 0.75rem;
+    --chart-1: 194 91% 63%;
+    --chart-2: 215 50% 75%;
+    --chart-3: 270 50% 70%;
+    --chart-4: 45 80% 65%;
+    --chart-5: 0 70% 60%;
+    --sidebar-background: 215 20% 6%;
+    --sidebar-foreground: 220 10% 90%;
+    --sidebar-primary: 194 91% 63%;
+    --sidebar-primary-foreground: 0 0% 2%;
+    --sidebar-accent: 215 15% 12%;
+    --sidebar-accent-foreground: 220 10% 90%;
+    --sidebar-border: 215 15% 18%;
+    --sidebar-ring: 194 91% 63%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-vs-bg text-vs-on-surface font-body;
+    background-color: #050505;
+  }
+}
+
+/* Custom VS Effects */
+.synaptic-pulse {
+  background: radial-gradient(ellipse at center, rgba(76, 215, 246, 0.04) 0%, transparent 70%);
+}
+
+.timer-glow {
+  text-shadow: 0 0 40px rgba(76, 215, 246, 0.4), 0 0 80px rgba(76, 215, 246, 0.1);
+}
+
+.synaptic-glow {
+  box-shadow: 0 0 40px rgba(76, 215, 246, 0.08), 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.neural-glow {
+  background: radial-gradient(ellipse at 50% 50%, rgba(76, 215, 246, 0.06) 0%, transparent 60%);
+}
+
+.spine-track {
+  width: 1px;
+  height: 200px;
+  background: linear-gradient(to bottom, transparent, rgba(76, 215, 246, 0.3), transparent);
+}
+
+.rim-light {
+  border-top: 1px solid rgba(76, 215, 246, 0.15);
+}
+
+.vs-gradient-text {
+  background: linear-gradient(135deg, #4CD7F6, #c2d8f8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.vs-btn-primary {
+  background: linear-gradient(135deg, #4CD7F6, #c2d8f8);
+  box-shadow: 0 10px 40px -5px rgba(76, 215, 246, 0.35);
+  transition: all 0.3s ease;
+}
+
+.vs-btn-primary:hover {
+  transform: scale(1.02);
+  box-shadow: 0 15px 50px -5px rgba(76, 215, 246, 0.5);
+}
+
+.vs-btn-primary:active {
+  transform: scale(0.97);
+}
+
+/* Progress ring animation */
+.progress-ring-circle {
+  transition: stroke-dashoffset 1s linear;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+/* Fade transition classes */
+.vs-fade-enter {
+  animation: vs-fade-in 0.8s ease-out forwards;
+}
+
+@keyframes vs-fade-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes vs-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Dot grid background */
+.dot-grid {
+  background-image: radial-gradient(circle, #adc7ff 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.025;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #0d1117; }
+::-webkit-scrollbar-thumb { background: #333840; border-radius: 4px; }
