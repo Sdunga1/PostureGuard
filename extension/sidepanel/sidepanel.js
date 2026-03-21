@@ -32,7 +32,7 @@
 
   const settings = {
     postureEnabled: false,
-    alertThresholdMs: 30000,
+    alertThresholdMs: 5000,
     debugMode: false,
     apiKey: ''
   };
@@ -44,21 +44,27 @@
     Object.assign(settings, stored);
 
     // Update UI
-    els.postureToggle.checked = settings.postureEnabled;
-    els.thresholdSlider.value = (settings.alertThresholdMs || 30000) / 1000;
-    els.thresholdValue.textContent = `${els.thresholdSlider.value}s`;
-    els.debugToggle.checked = settings.debugMode || false;
+    if (els.postureToggle) {
+      els.postureToggle.checked = settings.postureEnabled;
+    }
+    if (els.thresholdSlider) {
+      els.thresholdSlider.value = (settings.alertThresholdMs || 5000) / 1000;
+      els.thresholdValue.textContent = els.thresholdSlider.value + 's';
+    }
+    if (els.debugToggle) {
+      els.debugToggle.checked = settings.debugMode || false;
+    }
 
-    if (stored.postureCalV1) {
+    if (stored.postureCalV1 && els.calStatus) {
       els.calStatus.textContent = 'Calibrated';
       els.calStatus.classList.add('calibrated');
     }
 
-    if (settings.apiKey) {
-      els.apiKeyInput.value = '••••••••';
+    if (settings.apiKey && els.apiKeyInput) {
+      els.apiKeyInput.value = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
     }
 
-    updateStatusUI(settings.postureEnabled ? 'ready' : 'disabled');
+    updateStatusUI(settings.postureEnabled ? 'loading' : 'disabled');
   }
 
   async function saveSetting(key, value) {
@@ -66,17 +72,47 @@
     await chrome.storage.local.set({ [key]: value });
   }
 
+  // ─── Send message to content script safely ──────────────────
+
+  async function sendToActiveTab(message) {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab || !tab.id) {
+        console.warn('[PostureGuard] No active tab found');
+        return null;
+      }
+      // Skip chrome://, edge://, about: pages where content scripts can't run
+      if (tab.url && (tab.url.startsWith('chrome://') ||
+                      tab.url.startsWith('edge://') ||
+                      tab.url.startsWith('about:') ||
+                      tab.url.startsWith('chrome-extension://'))) {
+        console.warn('[PostureGuard] Cannot inject into:', tab.url);
+        updateStatusUI('error');
+        if (els.statusText) {
+          els.statusText.textContent = 'Open a webpage first';
+        }
+        return null;
+      }
+      return await chrome.tabs.sendMessage(tab.id, message);
+    } catch (err) {
+      console.warn('[PostureGuard] Tab message failed:', err.message);
+      // Content script may not be injected yet — try injecting it
+      return null;
+    }
+  }
+
   // ─── Status UI ────────────────────────────────────────────────
 
   function updateStatusUI(phase) {
+    if (!els.statusDot) return;
     els.statusDot.className = 'status-dot';
 
     switch (phase) {
       case 'disabled':
         els.statusDot.classList.add('off');
         els.statusText.textContent = 'Disabled';
-        els.scoreSection.style.display = 'none';
-        els.sessionSection.style.display = 'none';
+        if (els.scoreSection) els.scoreSection.style.display = 'none';
+        if (els.sessionSection) els.sessionSection.style.display = 'none';
         break;
       case 'loading':
         els.statusDot.classList.add('loading');
@@ -84,13 +120,13 @@
         break;
       case 'ready':
         els.statusDot.classList.add('ready');
-        els.statusText.textContent = 'Ready — Calibrate to begin';
+        els.statusText.textContent = 'Ready \u2014 Calibrate to begin';
         break;
       case 'live':
         els.statusDot.classList.add('live');
         els.statusText.textContent = 'Monitoring';
-        els.scoreSection.style.display = '';
-        els.sessionSection.style.display = '';
+        if (els.scoreSection) els.scoreSection.style.display = '';
+        if (els.sessionSection) els.sessionSection.style.display = '';
         break;
       case 'error':
         els.statusDot.classList.add('error');
@@ -101,107 +137,119 @@
 
   // ─── Event Handlers ───────────────────────────────────────────
 
-  els.postureToggle.addEventListener('change', async (e) => {
-    const enabled = e.target.checked;
-    await saveSetting('postureEnabled', enabled);
+  if (els.postureToggle) {
+    els.postureToggle.addEventListener('change', async (e) => {
+      const enabled = e.target.checked;
+      await saveSetting('postureEnabled', enabled);
+      updateStatusUI(enabled ? 'loading' : 'disabled');
 
-    // Notify content script on active tab
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab) {
-      chrome.tabs.sendMessage(tab.id, {
+      // Notify content script on active tab
+      const response = await sendToActiveTab({
         type: 'POSTURE_ENABLED_CHANGED',
         enabled
       });
-    }
 
-    updateStatusUI(enabled ? 'loading' : 'disabled');
-  });
-
-  els.calibrateBtn.addEventListener('click', async () => {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab) {
-      chrome.tabs.sendMessage(tab.id, { type: 'START_CALIBRATION' });
-    }
-  });
-
-  els.thresholdSlider.addEventListener('input', (e) => {
-    const seconds = parseInt(e.target.value, 10);
-    els.thresholdValue.textContent = `${seconds}s`;
-    saveSetting('alertThresholdMs', seconds * 1000);
-  });
-
-  els.debugToggle.addEventListener('change', (e) => {
-    saveSetting('debugMode', e.target.checked);
-  });
-
-  els.saveKeyBtn.addEventListener('click', () => {
-    const key = els.apiKeyInput.value.trim();
-    if (key && !key.startsWith('••')) {
-      saveSetting('apiKey', key);
-      els.apiKeyInput.value = '••••••••';
-    }
-  });
-
-  els.reportBtn.addEventListener('click', async () => {
-    // Request session data and Claude report via background
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab) return;
-
-    els.reportBtn.textContent = 'Generating...';
-    els.reportBtn.disabled = true;
-
-    try {
-      // Get session data from content script
-      const sessionData = await chrome.tabs.sendMessage(tab.id, {
-        type: 'GET_SESSION_DATA'
-      });
-
-      // Request Claude analysis via background
-      const result = await chrome.runtime.sendMessage({
-        type: 'GENERATE_REPORT',
-        sessionData
-      });
-
-      if (result.analysis) {
-        sessionData.claudeAnalysis = result.analysis;
+      if (!response && enabled) {
+        // If sending failed, inform user
+        updateStatusUI('error');
+        if (els.statusText) {
+          els.statusText.textContent = 'Open a webpage and try again';
+        }
       }
+    });
+  }
 
-      // Generate QR code
-      // TODO: Integrate qrcode-generator library
-      els.qrSection.style.display = '';
-      els.qrContainer.innerHTML = `
-        <p style="font-size: 12px; color: #666; text-align: center;">
-          QR code generation ready.<br>
-          Report data prepared for health app.
-        </p>
-      `;
-    } catch (err) {
-      console.error('[PostureGuard] Report generation failed:', err);
-    } finally {
-      els.reportBtn.textContent = 'Generate Report';
-      els.reportBtn.disabled = false;
-    }
-  });
+  if (els.calibrateBtn) {
+    els.calibrateBtn.addEventListener('click', async () => {
+      await sendToActiveTab({ type: 'START_CALIBRATION' });
+    });
+  }
+
+  if (els.thresholdSlider) {
+    els.thresholdSlider.addEventListener('input', (e) => {
+      const seconds = parseInt(e.target.value, 10);
+      els.thresholdValue.textContent = seconds + 's';
+      saveSetting('alertThresholdMs', seconds * 1000);
+    });
+  }
+
+  if (els.debugToggle) {
+    els.debugToggle.addEventListener('change', async (e) => {
+      const debugOn = e.target.checked;
+      await saveSetting('debugMode', debugOn);
+      // Toggle camera preview
+      await sendToActiveTab({ type: 'TOGGLE_PREVIEW' });
+    });
+  }
+
+  if (els.saveKeyBtn) {
+    els.saveKeyBtn.addEventListener('click', () => {
+      const key = els.apiKeyInput.value.trim();
+      if (key && !key.startsWith('\u2022')) {
+        saveSetting('apiKey', key);
+        els.apiKeyInput.value = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
+      }
+    });
+  }
+
+  if (els.reportBtn) {
+    els.reportBtn.addEventListener('click', async () => {
+      els.reportBtn.textContent = 'Generating...';
+      els.reportBtn.disabled = true;
+
+      try {
+        const sessionResponse = await sendToActiveTab({ type: 'GET_SESSION_DATA' });
+
+        if (sessionResponse && sessionResponse.ok) {
+          // Request Claude analysis via background
+          const result = await chrome.runtime.sendMessage({
+            type: 'GENERATE_REPORT',
+            sessionData: sessionResponse.data
+          });
+
+          if (result && result.analysis) {
+            sessionResponse.data.claudeAnalysis = result.analysis;
+          }
+
+          if (els.qrSection) els.qrSection.style.display = '';
+          if (els.qrContainer) {
+            els.qrContainer.innerHTML =
+              '<p style="font-size: 12px; color: #666; text-align: center;">' +
+              'QR code generation ready.<br>Report data prepared for health app.</p>';
+          }
+        }
+      } catch (err) {
+        console.error('[PostureGuard] Report generation failed:', err);
+      } finally {
+        els.reportBtn.textContent = 'Generate Report';
+        els.reportBtn.disabled = false;
+      }
+    });
+  }
 
   // ─── Listen for Storage Changes ───────────────────────────────
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
 
-    if (changes.postureCalV1 && changes.postureCalV1.newValue) {
+    if (changes.postureCalV1 && changes.postureCalV1.newValue && els.calStatus) {
       els.calStatus.textContent = 'Calibrated';
       els.calStatus.classList.add('calibrated');
     }
   });
 
-  // ─── Listen for Messages ──────────────────────────────────────
+  // ─── Listen for Messages from background/content ──────────────
 
   chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === 'POSTURE_SCORE_UPDATE') {
-      els.scoreDisplay.textContent = message.score;
-    }
-    if (message.type === 'POSTURE_STATUS') {
-      updateStatusUI(message.phase);
+    switch (message.type) {
+      case 'POSTURE_SCORE_UPDATE':
+        if (els.scoreDisplay) {
+          els.scoreDisplay.textContent = message.score;
+        }
+        break;
+      case 'POSTURE_STATUS_UPDATE':
+        updateStatusUI(message.phase);
+        break;
     }
   });
 
