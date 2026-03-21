@@ -19,12 +19,13 @@
   let human = null;
   let video = null;
   let stream = null;
-  let phase = 'loading'; // loading → ready → calibrating → live → error
+  let phase = 'loading'; // loading -> ready -> calibrating -> live -> error
   let detectInProgress = false;
   let lastPointTs = 0;
   let videoFrameHandle = null;
   let rafHandle = null;
   let enabled = false;
+  let frameCount = 0;
 
   // ─── Status Dispatch ──────────────────────────────────────────
 
@@ -35,12 +36,20 @@
     window.dispatchEvent(new CustomEvent('posture:status', {
       detail: { phase, note, ts: performance.now() }
     }));
+    console.log('[PostureGuard] Status:', nextPhase, '-', note);
   }
 
   function dispatchFrame(landmarks, confidence) {
     const now = performance.now();
     if (now - lastPointTs < POINT_THROTTLE_MS) return;
     lastPointTs = now;
+
+    frameCount++;
+    if (frameCount % 30 === 1) {
+      console.log('[PostureGuard] Frame #' + frameCount +
+        ', landmarks: ' + landmarks.length +
+        ', confidence: ' + confidence.toFixed(2));
+    }
 
     window.dispatchEvent(new CustomEvent('posture:frame', {
       detail: { landmarks, confidence, ts: now }
@@ -72,6 +81,7 @@
 
       video.srcObject = stream;
       await video.play();
+      console.log('[PostureGuard] Camera initialized (' + CAMERA_WIDTH + 'x' + CAMERA_HEIGHT + ')');
       return true;
     } catch (err) {
       console.error('[PostureGuard] Camera init failed:', err);
@@ -84,17 +94,18 @@
 
   async function initHuman() {
     try {
-      const humanUrl = chrome.runtime.getURL('lib/human/human.esm.js');
+      dispatchStatus('loading', 'Loading face detection model...');
+      const humanUrl = chrome.runtime.getURL('posture/human/human.esm.js');
       const { Human } = await import(humanUrl);
 
       human = new Human({
         backend: 'webgl',
-        modelBasePath: chrome.runtime.getURL('lib/human/models/'),
+        modelBasePath: chrome.runtime.getURL('posture/human/models/'),
         face: {
           enabled: true,
           detector: { enabled: true, rotation: true, return: true, maxDetected: 1 },
           mesh: { enabled: true },
-          iris: { enabled: false },
+          iris: { enabled: true },
           emotion: { enabled: false },
           description: { enabled: false }
         },
@@ -105,7 +116,9 @@
         segmentation: { enabled: false }
       });
 
+      console.log('[PostureGuard] Human.js loaded, warming up...');
       await human.warmup();
+      console.log('[PostureGuard] Human.js ready');
       return true;
     } catch (err) {
       console.error('[PostureGuard] Human.js init failed:', err);
@@ -158,6 +171,7 @@
       };
       rafHandle = requestAnimationFrame(step);
     }
+    console.log('[PostureGuard] Detection loop started');
   }
 
   function stopDetectionLoop() {
@@ -184,6 +198,7 @@
     if (!humanOk) return;
 
     enabled = true;
+    frameCount = 0;
     dispatchStatus('ready', 'Detection ready — waiting for calibration');
     startDetectionLoop();
   }
@@ -191,6 +206,7 @@
   function stop() {
     enabled = false;
     stopDetectionLoop();
+    removePreview();
 
     if (stream) {
       stream.getTracks().forEach(t => t.stop());
@@ -201,7 +217,55 @@
       video = null;
     }
 
+    console.log('[PostureGuard] Stopped after ' + frameCount + ' frames');
     dispatchStatus('loading', 'Stopped');
+  }
+
+  // ─── Camera Preview (Debug) ──────────────────────────────────
+
+  let previewEl = null;
+  let previewVisible = false;
+
+  function togglePreview() {
+    if (!video || !stream) return;
+
+    if (!previewEl) {
+      previewEl = document.createElement('div');
+      previewEl.id = 'posture-camera-preview';
+      previewEl.style.cssText = [
+        'position: fixed', 'bottom: 60px', 'left: 20px',
+        'width: 160px', 'height: 120px',
+        'border-radius: 8px', 'overflow: hidden',
+        'border: 2px solid rgba(255, 255, 255, 0.6)',
+        'box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3)',
+        'z-index: 2147483646', 'opacity: 0.85',
+        'transition: opacity 0.3s ease'
+      ].join('; ');
+
+      const previewVideo = document.createElement('video');
+      previewVideo.srcObject = stream;
+      previewVideo.autoplay = true;
+      previewVideo.muted = true;
+      previewVideo.playsInline = true;
+      previewVideo.style.cssText = [
+        'width: 100%', 'height: 100%',
+        'object-fit: cover', 'transform: scaleX(-1)'
+      ].join('; ');
+      previewEl.appendChild(previewVideo);
+      document.documentElement.appendChild(previewEl);
+    }
+
+    previewVisible = !previewVisible;
+    previewEl.style.display = previewVisible ? 'block' : 'none';
+    console.log('[PostureGuard] Camera preview:', previewVisible ? 'shown' : 'hidden');
+  }
+
+  function removePreview() {
+    if (previewEl && previewEl.parentNode) {
+      previewEl.parentNode.removeChild(previewEl);
+      previewEl = null;
+      previewVisible = false;
+    }
   }
 
   // ─── Event Listeners ──────────────────────────────────────────
@@ -214,6 +278,10 @@
     }
   });
 
+  window.addEventListener('posture:toggle-preview', () => {
+    togglePreview();
+  });
+
   // Check initial state from storage
   chrome.storage.local.get(['postureEnabled'], (result) => {
     if (result.postureEnabled) {
@@ -222,7 +290,7 @@
   });
 
   // Expose for other modules
-  window.PostureCore = { start, stop, getPhase: () => phase };
+  window.PostureCore = { start, stop, getPhase: () => phase, togglePreview };
 
   console.log('[PostureGuard] Posture core loaded');
 })();

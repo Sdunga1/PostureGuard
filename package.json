@@ -25,5 +25,8 @@
     "extension/manifest.json": [
       "node scripts/validate-manifest.js"
     ]
+  },
+  "dependencies": {
+    "@vladmandic/human": "^3.3.6"
   }
 }

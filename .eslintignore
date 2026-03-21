@@ -1,0 +1,4 @@
+# Third-party vendor libraries (not our code)
+extension/posture/human/
+extension/lib/
+extension/vendor/

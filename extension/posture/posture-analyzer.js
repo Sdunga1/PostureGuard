@@ -9,7 +9,7 @@
 
   // ─── Configuration ────────────────────────────────────────────
 
-  const ALERT_THRESHOLD_MS = 30000;          // Bad posture duration before alert
+  const ALERT_THRESHOLD_MS = 5000;           // Bad posture duration before alert (5s for dev/testing, 30s for production)
   const ROLLING_WINDOW_MS = 30000;           // Evaluation window
   const SCORE_DISPATCH_INTERVAL_MS = 1000;   // Score update rate
 

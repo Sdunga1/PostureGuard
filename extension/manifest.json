@@ -24,12 +24,17 @@
     {
       "matches": ["<all_urls>"],
       "js": [
+        "utils/one-euro-filter.js",
+        "utils/debug-logger.js",
+        "content.js",
         "posture/posture-core.js",
         "posture/posture-analyzer.js",
         "posture/posture-cal.js",
         "posture/posture-overlay.js"
       ],
-      "css": [],
+      "css": [
+        "posture/posture-overlay.css"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -49,8 +54,8 @@
     {
       "resources": [
         "posture/posture-overlay.css",
-        "lib/human/human.esm.js",
-        "lib/human/models/*"
+        "posture/human/human.esm.js",
+        "posture/human/models/*"
       ],
       "matches": ["<all_urls>"]
     }
