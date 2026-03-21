@@ -109,65 +109,57 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 });
 
 // ─── Tab Lifecycle ────────────────────────────────────────────
+// Camera stays running on the tab that started it (cameraTabId).
+// We only track which tab is "focused" (focusedTabId) for sending nudges.
+// Camera NEVER moves between tabs — it keeps running silently.
 
-// Helper: switch camera to a specific tab
-async function switchCameraToTab(newTabId) {
-  if (!settings.postureEnabled) return;
-  if (newTabId === activeTabId) return;
+let cameraTabId = null;   // Tab running the camera (stays fixed)
+let focusedTabId = null;  // Currently visible tab (for nudge display)
 
-  // Stop camera on old tab
-  if (activeTabId) {
-    chrome.tabs.sendMessage(activeTabId, {
-      type: 'POSTURE_ENABLED_CHANGED',
-      enabled: false
-    }).catch(() => {});
-  }
-
-  // Start camera on new tab (if it's a real webpage)
-  try {
-    const tab = await chrome.tabs.get(newTabId);
-    if (tab.url && !tab.url.startsWith('chrome://') &&
-        !tab.url.startsWith('edge://') &&
-        !tab.url.startsWith('about:') &&
-        !tab.url.startsWith('chrome-extension://')) {
-      activeTabId = newTabId;
-      chrome.tabs.sendMessage(newTabId, {
-        type: 'POSTURE_ENABLED_CHANGED',
-        enabled: true
-      }).catch(() => {});
-      console.log('[PostureGuard BG] Camera moved to tab', newTabId);
-    }
-  } catch (_e) {
-    // Tab may not exist
-  }
-}
-
-// When user switches tabs within a window
+// Track which tab the user is looking at (for nudge delivery)
 chrome.tabs.onActivated.addListener((activeInfo) => {
-  switchCameraToTab(activeInfo.tabId);
+  focusedTabId = activeInfo.tabId;
 });
 
-// When user switches between Chrome windows
 chrome.windows.onFocusChanged.addListener(async (windowId) => {
-  if (!settings.postureEnabled) return;
-  // WINDOW_ID_NONE means Chrome lost focus entirely (user switched to another app)
   if (windowId === chrome.windows.WINDOW_ID_NONE) return;
-
   try {
-    // Get the active tab in the newly focused window
     const tabs = await chrome.tabs.query({ active: true, windowId });
     if (tabs.length > 0) {
-      switchCameraToTab(tabs[0].id);
+      focusedTabId = tabs[0].id;
     }
   } catch (_e) {
     // Window may not exist
   }
 });
 
-// Clean up when tab is closed
-chrome.tabs.onRemoved.addListener((tabId) => {
-  if (tabId === activeTabId) {
+// When the tab running the camera is closed, try to start on another tab
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  if (tabId === cameraTabId) {
+    cameraTabId = null;
     activeTabId = null;
+
+    if (!settings.postureEnabled) return;
+
+    // Try to start camera on the currently focused tab
+    if (focusedTabId) {
+      try {
+        const tab = await chrome.tabs.get(focusedTabId);
+        if (tab.url && !tab.url.startsWith('chrome://') &&
+            !tab.url.startsWith('edge://') &&
+            !tab.url.startsWith('about:')) {
+          cameraTabId = focusedTabId;
+          activeTabId = focusedTabId;
+          chrome.tabs.sendMessage(focusedTabId, {
+            type: 'POSTURE_ENABLED_CHANGED',
+            enabled: true
+          }).catch(() => {});
+          console.log('[PostureGuard BG] Camera restarted on tab', focusedTabId);
+        }
+      } catch (_e) {
+        // Tab doesn't exist
+      }
+    }
   }
 });
 
@@ -270,9 +262,10 @@ function processFrame(landmarks, ts, tabId) {
   if (now - lastScoreBroadcast > SCORE_BROADCAST_INTERVAL_MS) {
     lastScoreBroadcast = now;
 
-    // Send to active tab's content script (for overlay)
-    if (tabId) {
-      chrome.tabs.sendMessage(tabId, {
+    // Send score to the focused tab (for overlay indicator)
+    const displayTab = focusedTabId || tabId;
+    if (displayTab) {
+      chrome.tabs.sendMessage(displayTab, {
         type: 'POSTURE_SCORE_UPDATE',
         score,
         metrics
@@ -330,6 +323,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message.type) {
     case 'POSTURE_FRAME':
       // Central frame processing — the core of global sync
+      // Track which tab is sending frames (has the camera)
+      if (sender.tab?.id) {
+        cameraTabId = sender.tab.id;
+        activeTabId = sender.tab.id;
+      }
       processFrame(message.landmarks, message.ts, sender.tab?.id);
       return false;
 
@@ -417,10 +415,11 @@ function getFallbackTip() {
 }
 
 // Send nudge via both in-page overlay AND OS-level notification
-function sendNudge(tip, targetTab) {
-  // 1. In-page overlay (only visible if user is on that Chrome tab)
-  if (targetTab) {
-    chrome.tabs.sendMessage(targetTab, { type: 'SHOW_NUDGE', tip }).catch(() => {});
+function sendNudge(tip, _triggerTab) {
+  // 1. In-page overlay — send to the FOCUSED tab (where user is looking)
+  const displayTab = focusedTabId || activeTabId;
+  if (displayTab) {
+    chrome.tabs.sendMessage(displayTab, { type: 'SHOW_NUDGE', tip }).catch(() => {});
   }
 
   // 2. OS-level notification (visible even outside Chrome)
