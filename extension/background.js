@@ -416,15 +416,33 @@ function getFallbackTip() {
   return tip;
 }
 
+// Send nudge via both in-page overlay AND OS-level notification
+function sendNudge(tip, targetTab) {
+  // 1. In-page overlay (only visible if user is on that Chrome tab)
+  if (targetTab) {
+    chrome.tabs.sendMessage(targetTab, { type: 'SHOW_NUDGE', tip }).catch(() => {});
+  }
+
+  // 2. OS-level notification (visible even outside Chrome)
+  chrome.notifications.create('posture-nudge-' + Date.now(), {
+    type: 'basic',
+    iconUrl: 'icons/icon-128.png',
+    title: 'PostureGuard',
+    message: tip,
+    priority: 1,
+    silent: false
+  }, () => {
+    // Notification created
+  });
+}
+
 async function handleNudgeRequest(metrics, tabId) {
   const now = Date.now();
   const targetTab = tabId || activeTabId;
 
   if (now - lastNudgeTime < NUDGE_COOLDOWN_MS || !settings.apiKey) {
     const tip = getFallbackTip();
-    if (targetTab) {
-      chrome.tabs.sendMessage(targetTab, { type: 'SHOW_NUDGE', tip }).catch(() => {});
-    }
+    sendNudge(tip, targetTab);
     return { content: tip, source: 'fallback' };
   }
 
@@ -445,9 +463,7 @@ async function handleNudgeRequest(metrics, tabId) {
   recentTips.push(tip);
   if (recentTips.length > MAX_CACHED_TIPS) recentTips.shift();
 
-  if (targetTab) {
-    chrome.tabs.sendMessage(targetTab, { type: 'SHOW_NUDGE', tip }).catch(() => {});
-  }
+  sendNudge(tip, targetTab);
 
   return result;
 }
