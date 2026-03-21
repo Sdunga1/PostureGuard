@@ -262,22 +262,20 @@ function processFrame(landmarks, ts, tabId) {
   if (now - lastScoreBroadcast > SCORE_BROADCAST_INTERVAL_MS) {
     lastScoreBroadcast = now;
 
-    // Send score to the focused tab (for overlay indicator)
-    const displayTab = focusedTabId || tabId;
-    if (displayTab) {
-      chrome.tabs.sendMessage(displayTab, {
-        type: 'POSTURE_SCORE_UPDATE',
-        score,
-        metrics
-      }).catch(() => {});
+    const scoreMsg = { type: 'POSTURE_SCORE_UPDATE', score, metrics };
+
+    // Send to camera tab (for its overlay)
+    if (tabId) {
+      chrome.tabs.sendMessage(tabId, scoreMsg).catch(() => {});
     }
 
-    // Broadcast to extension pages (side panel)
-    chrome.runtime.sendMessage({
-      type: 'POSTURE_SCORE_UPDATE',
-      score,
-      metrics
-    }).catch(() => {});
+    // Also send to focused tab if different (so passive tabs see live updates)
+    if (focusedTabId && focusedTabId !== tabId) {
+      chrome.tabs.sendMessage(focusedTabId, scoreMsg).catch(() => {});
+    }
+
+    // Broadcast to all extension pages (side panel on any tab)
+    chrome.runtime.sendMessage(scoreMsg).catch(() => {});
   }
 }
 
