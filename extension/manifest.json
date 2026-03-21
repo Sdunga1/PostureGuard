@@ -1,0 +1,58 @@
+{
+  "manifest_version": 3,
+  "name": "PostureGuard",
+  "version": "0.1.0",
+  "description": "Real-time posture detection and AI-powered coaching using your webcam and Claude",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": [
+        "posture/posture-core.js",
+        "posture/posture-analyzer.js",
+        "posture/posture-cal.js",
+        "posture/posture-overlay.js"
+      ],
+      "css": [],
+      "run_at": "document_idle"
+    }
+  ],
+  "side_panel": {
+    "default_path": "sidepanel/sidepanel.html"
+  },
+  "action": {
+    "default_title": "Open PostureGuard Panel",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "posture/posture-overlay.css",
+        "lib/human/human.esm.js",
+        "lib/human/models/*"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

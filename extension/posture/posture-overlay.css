@@ -1,0 +1,17 @@
+/* PostureGuard — Overlay Styles (web-accessible) */
+/* Additional styles loaded via chrome.runtime.getURL if needed */
+
+#posture-indicator {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #52c41a;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 2147483647;
+  pointer-events: none;
+  transition: background 0.5s ease, transform 0.3s ease;
+}
