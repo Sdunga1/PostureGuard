@@ -1,14 +1,37 @@
 'use strict';
 
 // PostureGuard — Content Script
-// Lightweight page-level coordinator. Listens for messages from
-// background.js and relays to posture overlay modules.
+// Forwards raw landmarks to background for centralized analysis.
+// Receives scores and nudges back from background for overlay display.
 
 (function () {
   if (window.__postureGuardContentInit) return;
   window.__postureGuardContentInit = true;
 
-  // Listen for messages from background service worker
+  // ─── Forward frames to background for centralized scoring ───
+
+  window.addEventListener('posture:frame', (e) => {
+    // Send raw landmarks to background — background does all analysis
+    chrome.runtime.sendMessage({
+      type: 'POSTURE_FRAME',
+      landmarks: e.detail.landmarks,
+      bodyKeypoints: e.detail.bodyKeypoints || null,
+      confidence: e.detail.confidence,
+      ts: e.detail.ts
+    }).catch(() => {});
+  });
+
+  // Forward status changes to background
+  window.addEventListener('posture:status', (e) => {
+    chrome.runtime.sendMessage({
+      type: 'POSTURE_STATUS_UPDATE',
+      phase: e.detail.phase,
+      note: e.detail.note
+    }).catch(() => {});
+  });
+
+  // ─── Receive messages from background ───────────────────────
+
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     switch (message.type) {
       case 'SHOW_NUDGE':
@@ -25,6 +48,14 @@
         sendResponse({ ok: true });
         break;
 
+      case 'POSTURE_SCORE_UPDATE':
+        // Relay score from background to overlay
+        window.dispatchEvent(new CustomEvent('posture:score', {
+          detail: { score: message.score, metrics: message.metrics }
+        }));
+        sendResponse({ ok: true });
+        break;
+
       case 'TOGGLE_PREVIEW':
         window.dispatchEvent(new CustomEvent('posture:toggle-preview'));
         sendResponse({ ok: true });
@@ -35,14 +66,6 @@
           window.PostureCal.startCalibration();
         }
         sendResponse({ ok: true });
-        break;
-
-      case 'GET_SESSION_DATA':
-        if (window.PostureAnalyzer) {
-          sendResponse({ ok: true, data: window.PostureAnalyzer.getSessionData() });
-        } else {
-          sendResponse({ ok: false, error: 'Analyzer not loaded' });
-        }
         break;
 
       case 'GET_STATUS':
@@ -56,29 +79,6 @@
         break;
     }
     return false;
-  });
-
-  // Forward posture score updates to background for side panel
-  window.addEventListener('posture:score', (e) => {
-    chrome.runtime.sendMessage({
-      type: 'POSTURE_SCORE_UPDATE',
-      score: e.detail.score,
-      metrics: e.detail.metrics,
-      ts: e.detail.ts
-    }).catch(() => {
-      // Side panel might not be open; ignore
-    });
-  });
-
-  // Forward status changes to background
-  window.addEventListener('posture:status', (e) => {
-    chrome.runtime.sendMessage({
-      type: 'POSTURE_STATUS_UPDATE',
-      phase: e.detail.phase,
-      note: e.detail.note
-    }).catch(() => {
-      // Ignore if no listener
-    });
   });
 
   console.log('[PostureGuard] Content script loaded');

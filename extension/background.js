@@ -1,28 +1,56 @@
 'use strict';
 
 // PostureGuard — Background Service Worker
-// Handles Claude API calls and message routing between content scripts and side panel.
+// SINGLE SOURCE OF TRUTH for posture analysis, session tracking, and nudges.
+// Content scripts send raw landmarks here; background scores, tracks, and pushes nudges.
 
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 const CLAUDE_MODEL = 'claude-sonnet-4-5-20241022';
 const ANTHROPIC_VERSION = '2023-06-01';
 
-// Settings cache (synced via chrome.storage)
+// ─── Settings (synced via chrome.storage) ──────────────────────
+
 const settings = {
   postureEnabled: false,
   alertThresholdMs: 5000,
   apiKey: ''
 };
 
+// ─── Centralized Posture Analyzer State ────────────────────────
+
+const SCORE_BROADCAST_INTERVAL_MS = 1000;
+const ROLLING_WINDOW_MS = 30000;
+
+// Landmark indices (Human.js / MediaPipe Face Mesh)
+const NOSE_TIP = 1;
+const LEFT_EYE = 33;
+const RIGHT_EYE = 362;
+const CHIN = 152;
+const FOREHEAD = 10;
+
+let calibration = null;         // Loaded from chrome.storage postureCalV1
+let activeTabId = null;         // Which tab is currently running camera
+let recentFrames = [];          // Rolling window of metric snapshots
+let badPostureStart = null;
+let alertTriggered = false;
+let lastScoreBroadcast = 0;
+
+// Global session (persists across tab switches)
+let session = {
+  startTime: null,
+  scores: [],
+  alerts: [],
+  worstPeriods: []
+};
+
 // Rate limiting for Claude API calls
 let lastNudgeTime = 0;
-const NUDGE_COOLDOWN_MS = 120000; // 2 minutes between Claude calls
+const NUDGE_COOLDOWN_MS = 120000;
 
-// Tip cache to avoid repetition
+// Tip cache
 const recentTips = [];
 const MAX_CACHED_TIPS = 10;
 
-// Fallback tips when Claude API is unavailable
 const FALLBACK_TIPS = [
   'Your head is tilting forward \u2014 try pulling your chin back gently.',
   'Shoulders are uneven. Roll them back and down.',
@@ -37,10 +65,12 @@ const FALLBACK_TIPS = [
 chrome.runtime.onInstalled.addListener(() => {
   console.log('[PostureGuard] Extension installed');
   loadSettings();
+  loadCalibration();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   loadSettings();
+  loadCalibration();
 });
 
 // Open side panel on extension icon click
@@ -57,41 +87,259 @@ async function loadSettings() {
   Object.assign(settings, stored);
 }
 
+async function loadCalibration() {
+  const stored = await chrome.storage.local.get(['postureCalV1']);
+  if (stored.postureCalV1) {
+    calibration = stored.postureCalV1;
+    console.log('[PostureGuard BG] Calibration loaded');
+  }
+}
+
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace !== 'local') return;
   for (const [key, { newValue }] of Object.entries(changes)) {
     if (key in settings) {
       settings[key] = newValue;
     }
+    if (key === 'postureCalV1') {
+      calibration = newValue;
+      console.log('[PostureGuard BG] Calibration updated');
+    }
   }
 });
+
+// ─── Tab Lifecycle ────────────────────────────────────────────
+
+// When user switches tabs, move camera to new tab
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  if (!settings.postureEnabled) return;
+
+  const newTabId = activeInfo.tabId;
+
+  // Stop camera on old tab
+  if (activeTabId && activeTabId !== newTabId) {
+    chrome.tabs.sendMessage(activeTabId, {
+      type: 'POSTURE_ENABLED_CHANGED',
+      enabled: false
+    }).catch(() => {});
+  }
+
+  // Start camera on new tab (if it's a real webpage)
+  try {
+    const tab = await chrome.tabs.get(newTabId);
+    if (tab.url && !tab.url.startsWith('chrome://') &&
+        !tab.url.startsWith('edge://') &&
+        !tab.url.startsWith('about:') &&
+        !tab.url.startsWith('chrome-extension://')) {
+      activeTabId = newTabId;
+      chrome.tabs.sendMessage(newTabId, {
+        type: 'POSTURE_ENABLED_CHANGED',
+        enabled: true
+      }).catch(() => {});
+    }
+  } catch (_e) {
+    // Tab may not exist
+  }
+});
+
+// Clean up when tab is closed
+chrome.tabs.onRemoved.addListener((tabId) => {
+  if (tabId === activeTabId) {
+    activeTabId = null;
+  }
+});
+
+// ─── Posture Analysis (runs in background) ────────────────────
+
+function calculateMetrics(landmarks, ts) {
+  const nose = landmarks[NOSE_TIP];
+  const leftEye = landmarks[LEFT_EYE];
+  const rightEye = landmarks[RIGHT_EYE];
+  const chin = landmarks[CHIN];
+  const forehead = landmarks[FOREHEAD];
+
+  if (!nose || !leftEye || !rightEye || !chin || !forehead) return null;
+
+  const eyeMidY = (leftEye[1] + rightEye[1]) / 2;
+  const eyeDx = rightEye[0] - leftEye[0];
+  const eyeDy = rightEye[1] - leftEye[1];
+
+  const forwardTilt = nose[1] - eyeMidY;
+  const lateralTilt = Math.atan2(eyeDy, eyeDx) * (180 / Math.PI);
+  const faceSize = Math.sqrt(
+    Math.pow(forehead[0] - chin[0], 2) +
+    Math.pow(forehead[1] - chin[1], 2)
+  );
+  const screenDistance = Math.sqrt(
+    Math.pow(rightEye[0] - leftEye[0], 2) +
+    Math.pow(rightEye[1] - leftEye[1], 2)
+  );
+
+  return { forwardTilt, lateralTilt, faceSize, screenDistance, ts };
+}
+
+function computeScore(metrics) {
+  if (!calibration) return 100;
+
+  const forwardScore = Math.min(100,
+    Math.abs(metrics.forwardTilt - calibration.forwardTilt) /
+    Math.abs(calibration.forwardTilt || 1) * 100 * 2
+  );
+  const lateralScore = Math.min(100,
+    Math.abs(metrics.lateralTilt - calibration.lateralTilt) * 10
+  );
+  const slouchScore = Math.min(100,
+    Math.abs(metrics.faceSize - calibration.faceSize) /
+    Math.abs(calibration.faceSize || 1) * 100 * 2
+  );
+  const distanceScore = metrics.screenDistance < calibration.screenDistance * 0.7
+    ? Math.min(100, (1 - metrics.screenDistance / calibration.screenDistance) * 200)
+    : 0;
+
+  const raw = (forwardScore * 0.35) + (lateralScore * 0.2) +
+              (slouchScore * 0.3) + (distanceScore * 0.15);
+
+  return Math.max(0, Math.min(100, Math.round(100 - raw)));
+}
+
+function processFrame(landmarks, ts, tabId) {
+  if (!session.startTime) session.startTime = Date.now();
+
+  const metrics = calculateMetrics(landmarks, ts);
+  if (!metrics) return;
+
+  // Rolling window
+  recentFrames.push({ metrics, ts });
+  const cutoff = ts - ROLLING_WINDOW_MS;
+  recentFrames = recentFrames.filter(f => f.ts > cutoff);
+
+  const score = computeScore(metrics);
+  session.scores.push(score);
+
+  // Alert logic
+  if (score < 50) {
+    if (!badPostureStart) badPostureStart = ts;
+
+    if (!alertTriggered && (ts - badPostureStart) > settings.alertThresholdMs) {
+      alertTriggered = true;
+      session.alerts.push({ ts, score, metrics });
+
+      // Trigger nudge
+      handleNudgeRequest(metrics, tabId);
+    }
+  } else {
+    if (badPostureStart && alertTriggered) {
+      const frameDuration = 33;
+      const frameCount = Math.max(1, Math.floor((ts - badPostureStart) / frameDuration));
+      session.worstPeriods.push({
+        start: badPostureStart,
+        end: ts,
+        score: Math.round(
+          session.scores.slice(-frameCount).reduce((a, b) => a + b, 0) / frameCount
+        ) || score
+      });
+    }
+    badPostureStart = null;
+    alertTriggered = false;
+  }
+
+  // Broadcast score (throttled)
+  const now = performance.now();
+  if (now - lastScoreBroadcast > SCORE_BROADCAST_INTERVAL_MS) {
+    lastScoreBroadcast = now;
+
+    // Send to active tab's content script (for overlay)
+    if (tabId) {
+      chrome.tabs.sendMessage(tabId, {
+        type: 'POSTURE_SCORE_UPDATE',
+        score,
+        metrics
+      }).catch(() => {});
+    }
+
+    // Broadcast to extension pages (side panel)
+    chrome.runtime.sendMessage({
+      type: 'POSTURE_SCORE_UPDATE',
+      score,
+      metrics
+    }).catch(() => {});
+  }
+}
+
+function getSessionData() {
+  const now = Date.now();
+  const duration = session.startTime ? Math.round((now - session.startTime) / 1000) : 0;
+  const avgScore = session.scores.length > 0
+    ? Math.round(session.scores.reduce((a, b) => a + b, 0) / session.scores.length)
+    : 0;
+
+  return {
+    version: 1,
+    sessionId: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2),
+    startTime: session.startTime ? new Date(session.startTime).toISOString() : null,
+    endTime: new Date(now).toISOString(),
+    duration,
+    metrics: {
+      avgPostureScore: avgScore,
+      avgHeadTilt: average(recentFrames.map(f => f.metrics.lateralTilt)),
+      avgSlouchAngle: average(recentFrames.map(f => f.metrics.forwardTilt)),
+      avgScreenDistance: average(recentFrames.map(f => f.metrics.screenDistance)),
+      alertCount: session.alerts.length,
+      worstPeriods: session.worstPeriods.slice(0, 5)
+    }
+  };
+}
+
+function resetSession() { // eslint-disable-line no-unused-vars
+  session = { startTime: null, scores: [], alerts: [], worstPeriods: [] };
+  recentFrames = [];
+  badPostureStart = null;
+  alertTriggered = false;
+}
+
+function average(arr) {
+  if (arr.length === 0) return 0;
+  return Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 100) / 100;
+}
 
 // ─── Message Routing ──────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message.type) {
+    case 'POSTURE_FRAME':
+      // Central frame processing — the core of global sync
+      processFrame(message.landmarks, message.ts, sender.tab?.id);
+      return false;
+
     case 'REQUEST_NUDGE':
       handleNudgeRequest(message.metrics, sender.tab?.id)
         .then(sendResponse);
-      return true; // async response
+      return true;
 
     case 'GENERATE_REPORT':
-      handleReportRequest(message.sessionData)
+      handleReportRequest(message.sessionData || getSessionData())
         .then(sendResponse);
       return true;
+
+    case 'GET_SESSION_DATA':
+      sendResponse({ ok: true, data: getSessionData() });
+      return false;
 
     case 'GET_SETTINGS':
       sendResponse(settings);
       return false;
 
-    case 'POSTURE_SCORE_UPDATE':
-      // Relay score from content script to side panel
-      // chrome.runtime.sendMessage broadcasts to all extension pages
-      // The side panel listens for this
+    case 'POSTURE_STATUS_UPDATE':
+      // Relay to side panel
+      chrome.runtime.sendMessage({
+        type: 'POSTURE_STATUS_UPDATE',
+        phase: message.phase,
+        note: message.note
+      }).catch(() => {});
       return false;
 
-    case 'POSTURE_STATUS_UPDATE':
-      // Relay status from content script to side panel
+    case 'POSTURE_SCORE_UPDATE':
+      // Already handled in processFrame; ignore duplicates from old analyzer
       return false;
 
     default:
@@ -125,14 +373,14 @@ async function callClaudeAPI(systemPrompt, userMessage) {
 
     if (!response.ok) {
       const err = await response.text();
-      console.error('[PostureGuard] Claude API error:', err);
+      console.error('[PostureGuard BG] Claude API error:', err);
       return { error: 'API error: ' + response.status };
     }
 
     const data = await response.json();
     return { content: data.content[0].text };
   } catch (err) {
-    console.error('[PostureGuard] Claude API fetch error:', err);
+    console.error('[PostureGuard BG] Claude API fetch error:', err);
     return { error: err.message };
   }
 }
@@ -148,13 +396,12 @@ function getFallbackTip() {
 
 async function handleNudgeRequest(metrics, tabId) {
   const now = Date.now();
+  const targetTab = tabId || activeTabId;
 
-  // Rate limit Claude API calls
   if (now - lastNudgeTime < NUDGE_COOLDOWN_MS || !settings.apiKey) {
-    // Use fallback tip
     const tip = getFallbackTip();
-    if (tabId) {
-      chrome.tabs.sendMessage(tabId, { type: 'SHOW_NUDGE', tip }).catch(() => {});
+    if (targetTab) {
+      chrome.tabs.sendMessage(targetTab, { type: 'SHOW_NUDGE', tip }).catch(() => {});
     }
     return { content: tip, source: 'fallback' };
   }
@@ -176,9 +423,8 @@ async function handleNudgeRequest(metrics, tabId) {
   recentTips.push(tip);
   if (recentTips.length > MAX_CACHED_TIPS) recentTips.shift();
 
-  // Send nudge to content script overlay
-  if (tabId) {
-    chrome.tabs.sendMessage(tabId, { type: 'SHOW_NUDGE', tip }).catch(() => {});
+  if (targetTab) {
+    chrome.tabs.sendMessage(targetTab, { type: 'SHOW_NUDGE', tip }).catch(() => {});
   }
 
   return result;

@@ -196,7 +196,8 @@
       els.reportBtn.disabled = true;
 
       try {
-        const sessionResponse = await sendToActiveTab({ type: 'GET_SESSION_DATA' });
+        // Get session data from background (global session, not tab-specific)
+        const sessionResponse = await chrome.runtime.sendMessage({ type: 'GET_SESSION_DATA' });
 
         if (sessionResponse && sessionResponse.ok) {
           // Request Claude analysis via background
