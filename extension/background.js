@@ -108,15 +108,15 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
   }
 });
 
-// ─── Tab Lifecycle ────────────────────────────────────────────
-// Camera stays running on the tab that started it (cameraTabId).
-// We only track which tab is "focused" (focusedTabId) for sending nudges.
-// Camera NEVER moves between tabs — it keeps running silently.
+// ─── Single-Tab Lock ──────────────────────────────────────────
+// Only ONE tab owns the monitoring session. Camera runs there forever
+// until that tab is closed or user disables monitoring.
+// Other tabs cannot start monitoring — side panel shows "locked" state.
 
-let cameraTabId = null;   // Tab running the camera (stays fixed)
-let focusedTabId = null;  // Currently visible tab (for nudge display)
+let ownerTabId = null;    // The ONE tab that owns the camera + session
+let focusedTabId = null;  // Currently visible tab (for nudge delivery)
 
-// Track which tab the user is looking at (for nudge delivery)
+// Track focused tab for nudge delivery
 chrome.tabs.onActivated.addListener((activeInfo) => {
   focusedTabId = activeInfo.tabId;
 });
@@ -133,33 +133,14 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
   }
 });
 
-// When the tab running the camera is closed, try to start on another tab
-chrome.tabs.onRemoved.addListener(async (tabId) => {
-  if (tabId === cameraTabId) {
-    cameraTabId = null;
+// When owner tab is closed, release the lock and reset
+chrome.tabs.onRemoved.addListener((tabId) => {
+  if (tabId === ownerTabId) {
+    console.log('[PostureGuard BG] Owner tab closed — session ended');
+    ownerTabId = null;
     activeTabId = null;
-
-    if (!settings.postureEnabled) return;
-
-    // Try to start camera on the currently focused tab
-    if (focusedTabId) {
-      try {
-        const tab = await chrome.tabs.get(focusedTabId);
-        if (tab.url && !tab.url.startsWith('chrome://') &&
-            !tab.url.startsWith('edge://') &&
-            !tab.url.startsWith('about:')) {
-          cameraTabId = focusedTabId;
-          activeTabId = focusedTabId;
-          chrome.tabs.sendMessage(focusedTabId, {
-            type: 'POSTURE_ENABLED_CHANGED',
-            enabled: true
-          }).catch(() => {});
-          console.log('[PostureGuard BG] Camera restarted on tab', focusedTabId);
-        }
-      } catch (_e) {
-        // Tab doesn't exist
-      }
-    }
+    settings.postureEnabled = false;
+    chrome.storage.local.set({ postureEnabled: false });
   }
 });
 
@@ -356,7 +337,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // Central frame processing — the core of global sync
       // Track which tab is sending frames (has the camera)
       if (sender.tab?.id) {
-        cameraTabId = sender.tab.id;
+        ownerTabId = sender.tab.id;
         activeTabId = sender.tab.id;
       }
       processFrame(message.landmarks, message.ts, sender.tab?.id);
@@ -381,8 +362,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({
         ok: true,
         postureEnabled: settings.postureEnabled,
-        isRunning: cameraTabId !== null || session.scores.length > 0,
+        isRunning: ownerTabId !== null,
         hasCalibration: calibration !== null,
+        ownerTabId: ownerTabId,
+        senderTabId: sender.tab?.id || null,
+        isOwner: sender.tab?.id === ownerTabId,
         lastScore: session.scores.length > 0
           ? session.scores[session.scores.length - 1]
           : null,
@@ -395,24 +379,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return false;
 
     case 'CAMERA_RELEASED':
-      // A tab stopped its camera (user disabled monitoring)
-      if (sender.tab?.id === cameraTabId) {
-        cameraTabId = null;
+      // Owner tab stopped its camera (user disabled monitoring)
+      if (sender.tab?.id === ownerTabId) {
+        ownerTabId = null;
         activeTabId = null;
-        console.log('[PostureGuard BG] Camera released by tab', sender.tab?.id);
+        console.log('[PostureGuard BG] Camera released by owner tab', sender.tab?.id);
       }
       return false;
 
     case 'SHOULD_START_CAMERA':
       // A tab asks: "should I start the camera?"
-      // Only if no other tab already has it running
-      if (!cameraTabId && settings.postureEnabled) {
+      // Only allow if no owner exists, or this tab IS the owner
+      if (!ownerTabId && settings.postureEnabled) {
+        ownerTabId = sender.tab?.id || null;
         sendResponse({ start: true });
-      } else if (cameraTabId === sender.tab?.id) {
-        // This tab already owns the camera — keep going
+        console.log('[PostureGuard BG] Tab', ownerTabId, 'claimed ownership');
+      } else if (ownerTabId === sender.tab?.id) {
         sendResponse({ start: true });
       } else {
-        sendResponse({ start: false, cameraTab: cameraTabId });
+        sendResponse({ start: false, ownerTab: ownerTabId });
       }
       return false;
 

@@ -262,12 +262,58 @@
     }
   });
 
+  // ─── Lock controls on non-owner tabs ─────────────────────────
+
+  function lockControls(message) {
+    // Disable all interactive controls
+    if (els.postureToggle) els.postureToggle.disabled = true;
+    if (els.calibrateBtn) els.calibrateBtn.disabled = true;
+    if (els.thresholdSlider) els.thresholdSlider.disabled = true;
+    if (els.debugToggle) els.debugToggle.disabled = true;
+    if (els.reportBtn) els.reportBtn.disabled = true;
+
+    // Show locked message
+    if (els.statusDot) {
+      els.statusDot.className = 'status-dot';
+      els.statusDot.classList.add('loading');
+    }
+    if (els.statusText) {
+      els.statusText.textContent = message || 'Monitoring active on another tab';
+    }
+  }
+
   // ─── Restore state from background on (re)open ──────────────
 
   async function restoreState() {
     try {
       const state = await chrome.runtime.sendMessage({ type: 'GET_CURRENT_STATE' });
       if (!state || !state.ok) return;
+
+      // If monitoring is running on ANOTHER tab, lock this panel
+      if (state.isRunning && !state.isOwner) {
+        lockControls('Monitoring active on another tab');
+
+        // Still show the live score (read-only)
+        if (state.lastScore !== null && els.scoreDisplay) {
+          els.scoreDisplay.textContent = state.lastScore;
+          if (els.scoreSection) els.scoreSection.style.display = '';
+        }
+        if (state.session && els.sessionSection) {
+          els.sessionSection.style.display = '';
+          if (els.sessionDuration) {
+            els.sessionDuration.textContent = Math.floor(state.session.duration / 60) + 'm';
+          }
+          if (els.sessionAvg) {
+            els.sessionAvg.textContent = state.session.metrics.avgPostureScore || '--';
+          }
+          if (els.sessionAlerts) {
+            els.sessionAlerts.textContent = state.session.metrics.alertCount || 0;
+          }
+        }
+        return;
+      }
+
+      // This IS the owner tab (or no owner yet) — full controls
 
       // Restore score display
       if (state.lastScore !== null && els.scoreDisplay) {
@@ -276,11 +322,10 @@
       }
 
       // Restore session stats
-      if (state.session && els.sessionSection) {
+      if (state.session && state.isRunning && els.sessionSection) {
         els.sessionSection.style.display = '';
         if (els.sessionDuration) {
-          const mins = Math.floor(state.session.duration / 60);
-          els.sessionDuration.textContent = mins + 'm';
+          els.sessionDuration.textContent = Math.floor(state.session.duration / 60) + 'm';
         }
         if (els.sessionAvg) {
           els.sessionAvg.textContent = state.session.metrics.avgPostureScore || '--';
@@ -298,13 +343,10 @@
 
       // Restore monitoring status
       if (state.isRunning) {
-        // Camera is running (on this or another tab) — show live
         updateStatusUI('live');
       } else if (state.postureEnabled && state.hasCalibration) {
-        // Enabled + calibrated but camera not started yet
         updateStatusUI('live');
       } else if (state.postureEnabled) {
-        // Enabled but not calibrated
         updateStatusUI('ready');
       }
     } catch (_e) {

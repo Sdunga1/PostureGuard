@@ -81,5 +81,34 @@
     return false;
   });
 
+  // ─── Warn before closing owner tab ───────────────────────────
+
+  let isOwnerTab = false;
+
+  function onBeforeUnload(e) {
+    if (!isOwnerTab) return;
+    e.preventDefault();
+    // Chrome requires returnValue to be set for the dialog to show
+    e.returnValue = 'PostureGuard is monitoring your posture. Close this tab?';
+  }
+
+  // When this tab starts the camera, mark as owner and add warning
+  window.addEventListener('posture:status', (e) => {
+    if (e.detail.phase === 'live' || e.detail.phase === 'ready') {
+      isOwnerTab = true;
+      window.addEventListener('beforeunload', onBeforeUnload);
+    } else if (e.detail.phase === 'loading' && !isOwnerTab) {
+      // Starting up — not owner yet
+    }
+  });
+
+  // When monitoring is disabled, remove the warning
+  window.addEventListener('posture:toggle', (e) => {
+    if (!e.detail.enabled) {
+      isOwnerTab = false;
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    }
+  });
+
   console.log('[PostureGuard] Content script loaded');
 })();
