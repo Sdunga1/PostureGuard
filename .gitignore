@@ -1,0 +1,38 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Chrome Extension
+*.pem
+*.crx
+
+# Node
+node_modules/
+.next/
+out/
+
+# Build
+dist/
+build/
+
+# Env
+.env
+.env.local
+.env*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Internal reference (not part of the project)
+resources/
+
+# Temp
+*.tmp
+.cache/
