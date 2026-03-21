@@ -31,6 +31,7 @@
   let isCalibrating = false;
   let collectedFrames = [];
   let overlayEl = null;
+  let videoContainerEl = null;
   let videoEl = null;
   let canvasEl = null;
   let canvasCtx = null;
@@ -62,13 +63,14 @@
     overlayEl.appendChild(titleEl);
 
     // Video container (with canvas overlay for face border)
-    const videoContainer = document.createElement('div');
-    videoContainer.style.cssText = [
+    videoContainerEl = document.createElement('div');
+    videoContainerEl.style.cssText = [
       'position: relative',
       'width: 480px', 'height: 360px',
       'border-radius: 12px', 'overflow: hidden',
-      'border: 2px solid rgba(255, 255, 255, 0.15)',
-      'box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5)'
+      'border: 2px solid #00d4ff',
+      'box-shadow: 0 0 20px rgba(0, 212, 255, 0.3)',
+      'transition: border-color 0.5s ease, box-shadow 0.5s ease'
     ].join('; ');
 
     // Mirror video element
@@ -92,9 +94,9 @@
     ].join('; ');
     canvasCtx = canvasEl.getContext('2d');
 
-    videoContainer.appendChild(videoEl);
-    videoContainer.appendChild(canvasEl);
-    overlayEl.appendChild(videoContainer);
+    videoContainerEl.appendChild(videoEl);
+    videoContainerEl.appendChild(canvasEl);
+    overlayEl.appendChild(videoContainerEl);
 
     // Instruction text
     instructionEl = document.createElement('div');
@@ -475,6 +477,7 @@
     if (overlayEl && overlayEl.parentNode) {
       overlayEl.parentNode.removeChild(overlayEl);
       overlayEl = null;
+      videoContainerEl = null;
       videoEl = null;
       canvasEl = null;
       canvasCtx = null;
@@ -575,15 +578,14 @@
 
     // Flash the canvas green for success
     if (canvasCtx && canvasEl) {
-      canvasCtx.fillStyle = 'rgba(82, 196, 26, 0.3)';
+      canvasCtx.fillStyle = 'rgba(82, 196, 26, 0.25)';
       canvasCtx.fillRect(0, 0, canvasEl.width, canvasEl.height);
     }
 
-    // Change video container border to solid green
-    const container = canvasEl ? canvasEl.parentElement : null;
-    if (container) {
-      container.style.border = '3px solid #52c41a';
-      container.style.boxShadow = '0 0 30px rgba(82, 196, 26, 0.4)';
+    // Turn video container border green
+    if (videoContainerEl) {
+      videoContainerEl.style.borderColor = '#52c41a';
+      videoContainerEl.style.boxShadow = '0 0 30px rgba(82, 196, 26, 0.5)';
     }
 
     // Close overlay after 2.5 seconds
