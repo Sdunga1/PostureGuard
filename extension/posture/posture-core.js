@@ -207,7 +207,16 @@
 
     enabled = true;
     frameCount = 0;
-    dispatchStatus('ready', 'Detection ready — waiting for calibration');
+
+    // Check if calibration already exists — skip straight to live
+    chrome.storage.local.get(['postureCalV1'], (result) => {
+      if (result.postureCalV1) {
+        dispatchStatus('live', 'Calibrated and monitoring');
+      } else {
+        dispatchStatus('ready', 'Detection ready \u2014 calibrate to begin');
+      }
+    });
+
     startDetectionLoop();
   }
 

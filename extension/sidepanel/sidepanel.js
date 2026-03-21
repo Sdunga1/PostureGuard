@@ -143,7 +143,13 @@
     els.postureToggle.addEventListener('change', async (e) => {
       const enabled = e.target.checked;
       await saveSetting('postureEnabled', enabled);
-      updateStatusUI(enabled ? 'loading' : 'disabled');
+
+      if (!enabled) {
+        updateStatusUI('disabled');
+      } else {
+        // Show "Starting..." briefly — will update to "Monitoring" once frames arrive
+        updateStatusUI('loading');
+      }
 
       // Notify content script on active tab
       const response = await sendToActiveTab({
