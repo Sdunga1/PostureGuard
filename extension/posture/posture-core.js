@@ -39,20 +39,21 @@
     console.log('[PostureGuard] Status:', nextPhase, '-', note);
   }
 
-  function dispatchFrame(landmarks, confidence) {
+  function dispatchFrame(landmarks, confidence, bodyKeypoints) {
     const now = performance.now();
     if (now - lastPointTs < POINT_THROTTLE_MS) return;
     lastPointTs = now;
 
     frameCount++;
     if (frameCount % 30 === 1) {
+      const bodyInfo = bodyKeypoints ? ', body: ' + bodyKeypoints.length + ' keypoints' : '';
       console.log('[PostureGuard] Frame #' + frameCount +
         ', landmarks: ' + landmarks.length +
-        ', confidence: ' + confidence.toFixed(2));
+        ', confidence: ' + confidence.toFixed(2) + bodyInfo);
     }
 
     window.dispatchEvent(new CustomEvent('posture:frame', {
-      detail: { landmarks, confidence, ts: now }
+      detail: { landmarks, confidence, bodyKeypoints, ts: now }
     }));
   }
 
@@ -109,7 +110,7 @@
           emotion: { enabled: false },
           description: { enabled: false }
         },
-        body: { enabled: false },
+        body: { enabled: true, modelPath: 'movenet-lightning.json', maxDetected: 1 },
         hand: { enabled: false },
         gesture: { enabled: false },
         object: { enabled: false },
@@ -136,13 +137,19 @@
     try {
       const result = await human.detect(video);
 
+      // Extract body keypoints
+      let bodyKeypoints = null;
+      if (result.body && result.body.length > 0) {
+        bodyKeypoints = result.body[0].keypoints || null;
+      }
+
       if (result.face && result.face.length > 0) {
         const face = result.face[0];
         const landmarks = face.mesh || [];
         const confidence = face.faceScore || 0;
 
         if (landmarks.length > 0 && confidence > 0.5) {
-          dispatchFrame(landmarks, confidence);
+          dispatchFrame(landmarks, confidence, bodyKeypoints);
         }
       }
     } catch (err) {

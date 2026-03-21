@@ -215,12 +215,34 @@
     [362, 463], [463, 464], [464, 465], [465, 351], [351, 6]
   ];
 
+  // MoveNet body skeleton connections
+  // MoveNet keypoints: 0=nose, 1=leftEye, 2=rightEye, 3=leftEar, 4=rightEar,
+  // 5=leftShoulder, 6=rightShoulder, 7=leftElbow, 8=rightElbow,
+  // 9=leftWrist, 10=rightWrist, 11=leftHip, 12=rightHip,
+  // 13=leftKnee, 14=rightKnee, 15=leftAnkle, 16=rightAnkle
+  const BODY_CONNECTIONS = [
+    // Head to shoulders
+    [0, 1], [0, 2], [1, 3], [2, 4],
+    // Shoulders
+    [5, 6],
+    // Left arm
+    [5, 7], [7, 9],
+    // Right arm
+    [6, 8], [8, 10],
+    // Torso
+    [5, 11], [6, 12], [11, 12],
+    // Left leg
+    [11, 13], [13, 15],
+    // Right leg
+    [12, 14], [14, 16]
+  ];
+
   // Scan animation state
   let scanLineY = 0;
   let scanDirection = 1;
   let pulsePhase = 0;
 
-  function drawFaceOutline(landmarks, isCapturing) {
+  function drawFaceOutline(landmarks, isCapturing, bodyKeypoints) {
     if (!canvasCtx || !canvasEl) return;
 
     const w = canvasEl.width;
@@ -320,7 +342,71 @@
     }
     canvasCtx.shadowBlur = 0;
 
-    // ── 6. Scanning line effect ──
+    // ── 6. Body skeleton ──
+    if (bodyKeypoints && bodyKeypoints.length > 0) {
+      const bodyColor = isCapturing ? '#52c41a' : '#00d4ff';
+      const bodyDim = isCapturing ? 'rgba(82, 196, 26, 0.3)' : 'rgba(0, 212, 255, 0.25)';
+
+      // Draw skeleton connections
+      canvasCtx.strokeStyle = bodyDim;
+      canvasCtx.lineWidth = 2.5;
+      for (const [a, b] of BODY_CONNECTIONS) {
+        const kpA = bodyKeypoints[a];
+        const kpB = bodyKeypoints[b];
+        if (kpA && kpB && kpA.score > 0.3 && kpB.score > 0.3) {
+          // Body keypoints use pixel positions relative to input image
+          const ax = (kpA.position ? kpA.position[0] : kpA.x) / 320 * w;
+          const ay = (kpA.position ? kpA.position[1] : kpA.y) / 240 * h;
+          const bx = (kpB.position ? kpB.position[0] : kpB.x) / 320 * w;
+          const by = (kpB.position ? kpB.position[1] : kpB.y) / 240 * h;
+
+          canvasCtx.beginPath();
+          canvasCtx.moveTo(ax, ay);
+          canvasCtx.lineTo(bx, by);
+          canvasCtx.stroke();
+        }
+      }
+
+      // Draw body keypoint dots
+      canvasCtx.fillStyle = bodyColor;
+      canvasCtx.shadowColor = bodyColor;
+      canvasCtx.shadowBlur = 6;
+      for (const kp of bodyKeypoints) {
+        if (kp && kp.score > 0.3) {
+          const x = (kp.position ? kp.position[0] : kp.x) / 320 * w;
+          const y = (kp.position ? kp.position[1] : kp.y) / 240 * h;
+          // Larger dots for shoulders and hips (important for posture)
+          const part = kp.part || '';
+          const radius = (part.includes('Shoulder') || part.includes('Hip')) ? 5 : 3;
+          canvasCtx.beginPath();
+          canvasCtx.arc(x, y, radius, 0, Math.PI * 2);
+          canvasCtx.fill();
+        }
+      }
+      canvasCtx.shadowBlur = 0;
+
+      // Draw shoulder alignment line (prominent — key for posture)
+      const lShoulder = bodyKeypoints[5];
+      const rShoulder = bodyKeypoints[6];
+      if (lShoulder && rShoulder && lShoulder.score > 0.3 && rShoulder.score > 0.3) {
+        const lx = (lShoulder.position ? lShoulder.position[0] : lShoulder.x) / 320 * w;
+        const ly = (lShoulder.position ? lShoulder.position[1] : lShoulder.y) / 240 * h;
+        const rx = (rShoulder.position ? rShoulder.position[0] : rShoulder.x) / 320 * w;
+        const ry = (rShoulder.position ? rShoulder.position[1] : rShoulder.y) / 240 * h;
+
+        canvasCtx.strokeStyle = bodyColor;
+        canvasCtx.lineWidth = 2;
+        canvasCtx.shadowColor = bodyColor;
+        canvasCtx.shadowBlur = 10 * pulse;
+        canvasCtx.beginPath();
+        canvasCtx.moveTo(lx, ly);
+        canvasCtx.lineTo(rx, ry);
+        canvasCtx.stroke();
+        canvasCtx.shadowBlur = 0;
+      }
+    }
+
+    // ── 7. Scanning line effect ──
     scanLineY += 2 * scanDirection;
     if (scanLineY > h) scanDirection = -1;
     if (scanLineY < 0) scanDirection = 1;
@@ -410,8 +496,8 @@
     const chin = landmarks[CHIN];
     const forehead = landmarks[FOREHEAD];
 
-    // Draw face outline on canvas (green = good)
-    drawFaceOutline(landmarks, true);
+    // Draw full body + face mesh on canvas (green = capturing)
+    drawFaceOutline(landmarks, true, event.detail.bodyKeypoints);
 
     if (!nose || !leftEye || !rightEye || !chin || !forehead) return;
 
@@ -444,8 +530,8 @@
   // Listen to frames during countdown too (to show face outline before capture starts)
   function onPreviewFrame(event) {
     if (isCalibrating) return; // handled by onCalibrationFrame
-    const { landmarks } = event.detail;
-    drawFaceOutline(landmarks, false); // yellow during countdown
+    const { landmarks, bodyKeypoints } = event.detail;
+    drawFaceOutline(landmarks, false, bodyKeypoints); // cyan during countdown
   }
 
   function finishCalibration() {
