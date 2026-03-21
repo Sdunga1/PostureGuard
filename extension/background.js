@@ -110,14 +110,13 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 
 // ─── Tab Lifecycle ────────────────────────────────────────────
 
-// When user switches tabs, move camera to new tab
-chrome.tabs.onActivated.addListener(async (activeInfo) => {
+// Helper: switch camera to a specific tab
+async function switchCameraToTab(newTabId) {
   if (!settings.postureEnabled) return;
-
-  const newTabId = activeInfo.tabId;
+  if (newTabId === activeTabId) return;
 
   // Stop camera on old tab
-  if (activeTabId && activeTabId !== newTabId) {
+  if (activeTabId) {
     chrome.tabs.sendMessage(activeTabId, {
       type: 'POSTURE_ENABLED_CHANGED',
       enabled: false
@@ -136,9 +135,32 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
         type: 'POSTURE_ENABLED_CHANGED',
         enabled: true
       }).catch(() => {});
+      console.log('[PostureGuard BG] Camera moved to tab', newTabId);
     }
   } catch (_e) {
     // Tab may not exist
+  }
+}
+
+// When user switches tabs within a window
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  switchCameraToTab(activeInfo.tabId);
+});
+
+// When user switches between Chrome windows
+chrome.windows.onFocusChanged.addListener(async (windowId) => {
+  if (!settings.postureEnabled) return;
+  // WINDOW_ID_NONE means Chrome lost focus entirely (user switched to another app)
+  if (windowId === chrome.windows.WINDOW_ID_NONE) return;
+
+  try {
+    // Get the active tab in the newly focused window
+    const tabs = await chrome.tabs.query({ active: true, windowId });
+    if (tabs.length > 0) {
+      switchCameraToTab(tabs[0].id);
+    }
+  } catch (_e) {
+    // Window may not exist
   }
 });
 
