@@ -5,97 +5,182 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PostureGuard</title>
   <link rel="stylesheet" href="sidepanel.css">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="panel">
-    <!-- Header with settings gear -->
-    <header class="header">
-      <div class="header-top">
-        <div>
-          <h1 class="logo">PostureGuard</h1>
-          <p class="tagline">AI-powered posture coaching</p>
+
+    <!-- ═══ Welcome Screen (shown when NOT logged in) ═══ -->
+    <div id="welcome-screen">
+      <div class="welcome-container">
+        <div class="welcome-brand">
+          <div class="welcome-icon">
+            <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+              <circle cx="28" cy="28" r="26" stroke="url(#wg)" stroke-width="1.5" opacity="0.25"/>
+              <circle cx="28" cy="28" r="20" stroke="url(#wg)" stroke-width="1.5" opacity="0.45"/>
+              <circle cx="28" cy="28" r="14" stroke="url(#wg)" stroke-width="2"/>
+              <circle cx="28" cy="28" r="4" fill="#4CD7F6"/>
+              <defs><linearGradient id="wg" x1="0" y1="0" x2="56" y2="56"><stop offset="0%" stop-color="#4CD7F6"/><stop offset="100%" stop-color="#c2d8f8"/></linearGradient></defs>
+            </svg>
+          </div>
+          <h1 class="welcome-title">PostureGuard</h1>
+          <p class="welcome-subtitle">AI-powered posture coaching</p>
         </div>
-        <button class="gear-btn" id="settings-gear-btn" title="Settings">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M8.33 2.5H11.67L12.08 4.58C12.5 4.75 12.88 4.98 13.23 5.25L15.25 4.5L16.92 7.38L15.33 8.83C15.37 9.05 15.38 9.28 15.38 9.5C15.38 9.72 15.37 9.95 15.33 10.17L16.92 11.62L15.25 14.5L13.23 13.75C12.88 14.02 12.5 14.25 12.08 14.42L11.67 16.5H8.33L7.92 14.42C7.5 14.25 7.12 14.02 6.77 13.75L4.75 14.5L3.08 11.62L4.67 10.17C4.63 9.95 4.62 9.72 4.62 9.5C4.62 9.28 4.63 9.05 4.67 8.83L3.08 7.38L4.75 4.5L6.77 5.25C7.12 4.98 7.5 4.75 7.92 4.58L8.33 2.5ZM10 7C8.62 7 7.5 8.12 7.5 9.5C7.5 10.88 8.62 12 10 12C11.38 12 12.5 10.88 12.5 9.5C12.5 8.12 11.38 7 10 7Z" fill="currentColor"/>
+
+        <div class="welcome-features">
+          <div class="feature-item">
+            <svg class="feature-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+            </svg>
+            <span>Real-time posture detection</span>
+          </div>
+          <div class="feature-item">
+            <svg class="feature-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M20 12a8 8 0 0 0-8-8v8h8z"/>
+            </svg>
+            <span>AI coaching with Claude</span>
+          </div>
+          <div class="feature-item">
+            <svg class="feature-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            <span>Track your progress over time</span>
+          </div>
+        </div>
+
+        <div class="welcome-auth">
+          <button id="auth-google-btn" class="btn btn-primary" style="width:100%;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px;">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <polyline points="10 17 15 12 10 7"/>
+              <line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+            Sign In
+          </button>
+          <p class="hint" style="margin-top:8px;text-align:center;">Opens PostureGuard Health App to sign in</p>
+        </div>
+
+        <p class="welcome-footer">Your camera data never leaves your device</p>
+      </div>
+    </div>
+
+    <!-- ═══ Main App (shown when logged in) ═══ -->
+    <div id="main-app" style="display:none;">
+
+      <!-- Header with profile + settings -->
+      <header class="header">
+        <div class="header-top">
+          <div class="header-brand">
+            <h1 class="logo">PostureGuard</h1>
+          </div>
+          <div class="header-actions">
+            <button class="icon-btn" id="settings-gear-btn" title="Settings">
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M8.33 2.5H11.67L12.08 4.58C12.5 4.75 12.88 4.98 13.23 5.25L15.25 4.5L16.92 7.38L15.33 8.83C15.37 9.05 15.38 9.28 15.38 9.5C15.38 9.72 15.37 9.95 15.33 10.17L16.92 11.62L15.25 14.5L13.23 13.75C12.88 14.02 12.5 14.25 12.08 14.42L11.67 16.5H8.33L7.92 14.42C7.5 14.25 7.12 14.02 6.77 13.75L4.75 14.5L3.08 11.62L4.67 10.17C4.63 9.95 4.62 9.72 4.62 9.5C4.62 9.28 4.63 9.05 4.67 8.83L3.08 7.38L4.75 4.5L6.77 5.25C7.12 4.98 7.5 4.75 7.92 4.58L8.33 2.5ZM10 7C8.62 7 7.5 8.12 7.5 9.5C7.5 10.88 8.62 12 10 12C11.38 12 12.5 10.88 12.5 9.5C12.5 8.12 11.38 7 10 7Z"/>
+              </svg>
+            </button>
+            <button class="profile-btn" id="profile-btn" title="Profile">
+              <img id="auth-avatar" class="profile-avatar" src="" alt="" style="display:none;">
+              <span class="profile-initial" id="profile-initial">U</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Profile dropdown (hidden by default) -->
+      <div class="profile-dropdown" id="profile-dropdown" style="display:none;">
+        <div class="profile-info">
+          <img id="dropdown-avatar" class="dropdown-avatar" src="" alt="" style="display:none;">
+          <span class="dropdown-initial" id="dropdown-initial">U</span>
+          <div class="profile-details">
+            <span class="profile-name" id="auth-name">User</span>
+            <span class="profile-email" id="auth-email-display">email@example.com</span>
+          </div>
+        </div>
+        <hr class="dropdown-divider">
+        <button id="auth-signout-btn" class="dropdown-item dropdown-signout">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M6 12.5a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v2a.5.5 0 0 1-1 0v-2A1.5 1.5 0 0 1 6.5 2h8A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 5 12.5v-2a.5.5 0 0 1 1 0v2z"/>
+            <path d="M.146 8.354a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L1.707 7.5H10.5a.5.5 0 0 1 0 1H1.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3z"/>
           </svg>
+          Sign Out
         </button>
       </div>
-    </header>
 
-    <!-- Main Toggle -->
-    <section class="section">
-      <div class="toggle-row">
-        <label for="posture-toggle">Enable Monitoring</label>
-        <label class="switch">
-          <input type="checkbox" id="posture-toggle">
-          <span class="slider"></span>
-        </label>
-      </div>
-      <div class="status-row">
-        <span class="status-dot" id="status-dot"></span>
-        <span class="status-text" id="status-text">Disabled</span>
-      </div>
-    </section>
-
-    <!-- Posture Score -->
-    <section class="section" id="score-section" style="display:none;">
-      <h2>Posture Score</h2>
-      <div class="score-display" id="score-display">--</div>
-      <div class="score-label">out of 100</div>
-    </section>
-
-    <!-- Calibration -->
-    <section class="section">
-      <h2>Calibration</h2>
-      <p class="hint">Sit in your ideal posture, then calibrate.</p>
-      <button id="calibrate-btn" class="btn btn-primary" disabled>Calibrate Position</button>
-      <span class="cal-status" id="cal-status">Not calibrated</span>
-    </section>
-
-    <!-- Settings -->
-    <section class="section">
-      <h2>Settings</h2>
-      <div class="setting-row">
-        <label for="threshold-slider">Alert Sensitivity</label>
-        <input type="range" id="threshold-slider" min="15" max="120" value="30" step="5">
-        <span class="setting-value" id="threshold-value">30s</span>
-      </div>
-      <div class="toggle-row">
-        <label for="debug-toggle">Debug Mode</label>
-        <label class="switch switch-sm">
-          <input type="checkbox" id="debug-toggle">
-          <span class="slider"></span>
-        </label>
-      </div>
-    </section>
-
-    <!-- Session -->
-    <section class="section" id="session-section" style="display:none;">
-      <h2>Session</h2>
-      <div class="session-stats">
-        <div class="stat">
-          <span class="stat-value" id="session-duration">0m</span>
-          <span class="stat-label">Duration</span>
+      <!-- Main Toggle -->
+      <section class="section">
+        <div class="toggle-row">
+          <label for="posture-toggle">Enable Monitoring</label>
+          <label class="switch">
+            <input type="checkbox" id="posture-toggle">
+            <span class="slider"></span>
+          </label>
         </div>
-        <div class="stat">
-          <span class="stat-value" id="session-avg">--</span>
-          <span class="stat-label">Avg Score</span>
+        <div class="status-row">
+          <span class="status-dot" id="status-dot"></span>
+          <span class="status-text" id="status-text">Disabled</span>
         </div>
-        <div class="stat">
-          <span class="stat-value" id="session-alerts">0</span>
-          <span class="stat-label">Alerts</span>
-        </div>
-      </div>
-      <button id="report-btn" class="btn btn-secondary">Generate Report</button>
-    </section>
+      </section>
 
-    <!-- QR Code -->
-    <section class="section" id="qr-section" style="display:none;">
-      <h2>Session Report</h2>
-      <p class="hint">Scan to view your report on mobile</p>
-      <div id="qr-container"></div>
-    </section>
+      <!-- Posture Score -->
+      <section class="section" id="score-section" style="display:none;">
+        <h2>Posture Score</h2>
+        <div class="score-display" id="score-display">--</div>
+        <div class="score-label">out of 100</div>
+      </section>
+
+      <!-- Calibration -->
+      <section class="section">
+        <h2>Calibration</h2>
+        <p class="hint">Sit in your ideal posture, then calibrate.</p>
+        <button id="calibrate-btn" class="btn btn-primary" disabled>Calibrate Posture</button>
+        <span class="cal-status" id="cal-status">Not calibrated</span>
+      </section>
+
+      <!-- Settings -->
+      <section class="section disabled-section" id="settings-section">
+        <h2>Settings</h2>
+        <div class="setting-row">
+          <label for="threshold-slider">Alert Sensitivity</label>
+          <input type="range" id="threshold-slider" min="15" max="120" value="30" step="5">
+          <span class="setting-value" id="threshold-value">30s</span>
+        </div>
+        <div class="toggle-row">
+          <label for="debug-toggle">Debug Mode</label>
+          <label class="switch switch-sm">
+            <input type="checkbox" id="debug-toggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Session -->
+      <section class="section" id="session-section" style="display:none;">
+        <h2>Session</h2>
+        <div class="session-stats">
+          <div class="stat">
+            <span class="stat-value" id="session-duration">0m</span>
+            <span class="stat-label">Duration</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="session-avg">--</span>
+            <span class="stat-label">Avg Score</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="session-alerts">0</span>
+            <span class="stat-label">Alerts</span>
+          </div>
+        </div>
+        <button id="report-btn" class="btn btn-secondary">Generate Report</button>
+      </section>
+
+      <!-- QR Code -->
+      <section class="section" id="qr-section" style="display:none;">
+        <h2>Session Report</h2>
+        <p class="hint">Scan to view your report on mobile</p>
+        <div id="qr-container"></div>
+      </section>
+    </div>
 
     <!-- Settings Panel (hidden by default) -->
     <div class="settings-overlay" id="settings-overlay" style="display:none;">
@@ -109,11 +194,13 @@
           <p class="hint">Required for AI-powered coaching messages and reports. Get your key from <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
           <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." class="input">
           <button id="save-key-btn" class="btn btn-primary" style="width:100%;">Save API Key</button>
+          <p class="vault-status" id="vault-status" style="display:none;"></p>
         </div>
       </div>
     </div>
   </div>
 
+  <script src="../lib/auth.js"></script>
   <script src="sidepanel.js"></script>
 </body>
 </html>
