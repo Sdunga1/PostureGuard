@@ -25,7 +25,10 @@
     qrSection: document.getElementById('qr-section'),
     qrContainer: document.getElementById('qr-container'),
     apiKeyInput: document.getElementById('api-key-input'),
-    saveKeyBtn: document.getElementById('save-key-btn')
+    saveKeyBtn: document.getElementById('save-key-btn'),
+    settingsGearBtn: document.getElementById('settings-gear-btn'),
+    settingsOverlay: document.getElementById('settings-overlay'),
+    settingsCloseBtn: document.getElementById('settings-close-btn')
   };
 
   // ─── Settings ─────────────────────────────────────────────────
@@ -147,10 +150,14 @@
 
       if (!enabled) {
         updateStatusUI('disabled');
+        if (els.calibrateBtn) els.calibrateBtn.disabled = true;
       } else {
-        // Show "Starting..." briefly — will update to "Monitoring" once frames arrive
         updateStatusUI('loading');
+        // Enable calibrate button once monitoring starts
+        if (els.calibrateBtn) els.calibrateBtn.disabled = false;
       }
+      // Reset session ended flag when re-enabling
+      sessionEnded = false;
 
       // Notify content script on active tab
       const response = await sendToActiveTab({
@@ -197,6 +204,28 @@
       if (key && !key.startsWith('\u2022')) {
         saveSetting('apiKey', key);
         els.apiKeyInput.value = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
+        // Close settings panel after saving
+        if (els.settingsOverlay) els.settingsOverlay.style.display = 'none';
+      }
+    });
+  }
+
+  // Settings gear — open/close settings overlay
+  if (els.settingsGearBtn) {
+    els.settingsGearBtn.addEventListener('click', () => {
+      if (els.settingsOverlay) els.settingsOverlay.style.display = 'flex';
+    });
+  }
+  if (els.settingsCloseBtn) {
+    els.settingsCloseBtn.addEventListener('click', () => {
+      if (els.settingsOverlay) els.settingsOverlay.style.display = 'none';
+    });
+  }
+  // Close on overlay background click
+  if (els.settingsOverlay) {
+    els.settingsOverlay.addEventListener('click', (e) => {
+      if (e.target === els.settingsOverlay) {
+        els.settingsOverlay.style.display = 'none';
       }
     });
   }
@@ -446,13 +475,14 @@
         els.calStatus.classList.add('calibrated');
       }
 
-      // Restore monitoring status
-      if (state.isRunning) {
-        updateStatusUI('live');
-      } else if (state.postureEnabled && state.hasCalibration) {
-        updateStatusUI('live');
-      } else if (state.postureEnabled) {
-        updateStatusUI('ready');
+      // Restore monitoring status + calibrate button
+      if (state.isRunning || state.postureEnabled) {
+        if (els.calibrateBtn) els.calibrateBtn.disabled = false;
+        if (state.isRunning || state.hasCalibration) {
+          updateStatusUI('live');
+        } else {
+          updateStatusUI('ready');
+        }
       }
     } catch (_e) {
       // Background not ready yet
