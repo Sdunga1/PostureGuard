@@ -1,0 +1,269 @@
+/* PostureGuard — Side Panel Styles */
+
+:root {
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-text: #1f2937;
+  --color-text-muted: #6b7280;
+  --color-bg: #ffffff;
+  --color-surface: #f9fafb;
+  --color-border: #e5e7eb;
+  --radius: 8px;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  color: var(--color-text);
+  background: var(--color-bg);
+  width: 100%;
+  min-height: 100vh;
+}
+
+.panel {
+  padding: 16px;
+  max-width: 360px;
+}
+
+/* Header */
+.header {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.tagline {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+/* Sections */
+.section {
+  margin-bottom: 20px;
+  padding: 12px;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+}
+
+.section h2 {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  margin-bottom: 10px;
+}
+
+/* Toggle Row */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.toggle-row label {
+  font-weight: 500;
+}
+
+/* Status */
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d1d5db;
+}
+
+.status-dot.loading {
+  background: var(--color-warning);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.status-dot.ready {
+  background: var(--color-warning);
+}
+
+.status-dot.live {
+  background: var(--color-success);
+}
+
+.status-dot.error {
+  background: var(--color-danger);
+}
+
+.status-text {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* Score */
+.score-display {
+  font-size: 48px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--color-primary);
+  line-height: 1;
+}
+
+.score-label {
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* Buttons */
+.btn {
+  display: inline-block;
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-hover);
+}
+
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.btn-secondary:hover {
+  background: var(--color-border);
+}
+
+.btn-small {
+  padding: 4px 12px;
+  font-size: 12px;
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: 4px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Calibration */
+.cal-status {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-left: 8px;
+}
+
+.cal-status.calibrated {
+  color: var(--color-success);
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+/* Settings */
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.setting-row label {
+  flex: 1;
+  font-size: 13px;
+}
+
+.setting-row input[type="range"] {
+  width: 100px;
+}
+
+.setting-value {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  min-width: 30px;
+}
+
+/* Session Stats */
+.session-stats {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 12px;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat-value {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+/* Input */
+.input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+/* QR */
+#qr-container {
+  text-align: center;
+  padding: 12px;
+}
+
+#qr-container img {
+  max-width: 200px;
+}
+
+/* Animation */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
