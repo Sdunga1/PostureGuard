@@ -276,21 +276,25 @@
   }
 
   function stop() {
+    // Set enabled = false FIRST so any queued callbacks skip processing
     enabled = false;
-    stopDetectionLoop();
-    removePreview();
+    // Small delay to ensure no queued frames are processed
+    setTimeout(() => {
+      stopDetectionLoop();
+      removePreview();
 
-    if (stream) {
-      stream.getTracks().forEach(t => t.stop());
-      stream = null;
-    }
-    if (video && video.parentNode) {
-      video.parentNode.removeChild(video);
-      video = null;
-    }
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+      if (video && video.parentNode) {
+        video.parentNode.removeChild(video);
+        video = null;
+      }
 
-    console.log('[PostureGuard] Stopped after ' + frameCount + ' frames');
-    dispatchStatus('loading', 'Stopped');
+      console.log('[PostureGuard] Stopped after ' + frameCount + ' frames');
+      dispatchStatus('loading', 'Stopped');
+    }, 50);
   }
 
   // ─── Camera Preview (Debug) ──────────────────────────────────
