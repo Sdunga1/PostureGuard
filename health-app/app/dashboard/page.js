@@ -131,7 +131,7 @@ export default function Dashboard() {
             {sessions.map((s, i) => (
               <a
                 key={s.id}
-                href={`/?id=${s.id}`}
+                href={`/?id=${s.id}&from=insights`}
                 className="glass-card rounded-2xl p-6 border border-vs-outline-variant/10 hover:border-vs-primary/30 transition-all cursor-pointer block"
               >
                 <div className="flex justify-between items-start mb-4">

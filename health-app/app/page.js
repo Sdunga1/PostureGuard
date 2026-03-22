@@ -357,7 +357,7 @@ function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn,
     sessionStorage.setItem(key, '1') // mark as played
     return false
   })
-  const hasSessionInUrl = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('id')
+  const cameFromInsights = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('from') === 'insights'
   const [phase, setPhase] = useState(skipAnim ? 2 : 0)
   const [showDetails, setShowDetails] = useState(false)
 
@@ -536,7 +536,7 @@ function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn,
                     View All Sessions
                   </a>
                 </div>
-              ) : hasSessionInUrl ? (
+              ) : cameFromInsights ? (
                 // Came from insights — just show Back to Insights, no start button
                 <a
                   href="/dashboard"
@@ -545,7 +545,7 @@ function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn,
                   Back to Insights
                 </a>
               ) : (
-                // Fresh home — start workout
+                // From extension or fresh home — start workout
                 <button
                   onClick={onStart}
                   className="vs-btn-primary w-full py-5 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm"
@@ -1316,7 +1316,7 @@ export default function App() {
           userName={userName}
           user={user}
           onSignOut={handleSignOut}
-          isHistorical={!!sessionReport?.metrics?.workout_data && pendingSessionId != null}
+          isHistorical={!!sessionReport?.metrics?.workout_data && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('from') === 'insights'}
         />
       )}
     </>
