@@ -185,8 +185,7 @@
   }
 
   function getHealthAppUrl() {
-    // Use localhost for dev, Vercel for production
-    return 'http://localhost:3000';
+    return 'https://posture-guard-hackasu.vercel.app';
   }
 
   // ─── Settings ─────────────────────────────────────────────────
