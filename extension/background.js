@@ -736,6 +736,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'SHOULD_START_CAMERA': {
       // A tab asks: "should I start the camera?"
+      // The content script already checked postureEnabled — we just manage ownership.
       const requestingTab = sender.tab?.id || null;
 
       // If there's a stale owner, verify it still exists
@@ -745,22 +746,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse({ start: false, ownerTab: ownerTabId });
         }).catch(() => {
           // Owner tab no longer exists — release stale lock and grant
-          console.log('[PostureGuard BG] Stale owner tab', ownerTabId, 'gone, releasing');
+          console.log('[PostureGuard BG] Stale owner', ownerTabId, 'gone, granting to', requestingTab);
           ownerTabId = requestingTab;
           activeTabId = null;
           sendResponse({ start: true });
-          console.log('[PostureGuard BG] Tab', ownerTabId, 'claimed ownership');
         });
         return true; // Async response
       }
 
-      if (!ownerTabId && settings.postureEnabled) {
+      if (!ownerTabId) {
+        // No owner — grant to requester
         ownerTabId = requestingTab;
         sendResponse({ start: true });
         console.log('[PostureGuard BG] Tab', ownerTabId, 'claimed ownership');
       } else if (ownerTabId === requestingTab) {
+        // Same tab asking again — allow
         sendResponse({ start: true });
       } else {
+        // Different tab already owns it
         sendResponse({ start: false, ownerTab: ownerTabId });
       }
       return false;
