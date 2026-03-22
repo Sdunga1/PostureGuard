@@ -112,16 +112,6 @@ chrome.runtime.onStartup.addListener(() => {
   notifyContentScriptsOfRestart();
 });
 
-// Also notify on first message (in case background was idle-restarted)
-let firstMessage = true;
-function ensureInitialized() {
-  if (firstMessage) {
-    firstMessage = false;
-    loadSettings();
-    loadCalibration();
-    // Don't notify here — too early, settings might not be loaded yet
-  }
-}
 
 // Open side panel on extension icon click
 chrome.action.onClicked.addListener((tab) => {
@@ -201,6 +191,15 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     activeTabId = null;
     settings.postureEnabled = false;
     chrome.storage.local.set({ postureEnabled: false });
+  }
+});
+
+// When owner tab is reloaded, release the lock (content script dies on reload)
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (tabId === ownerTabId && changeInfo.status === 'loading') {
+    console.log('[PostureGuard BG] Owner tab reloaded — releasing camera lock');
+    ownerTabId = null;
+    activeTabId = null;
   }
 });
 
@@ -288,7 +287,6 @@ function calculateBodyMetrics(bodyKeypoints, ts) {
 }
 
 let scoreLogCounter = 0;
-const backgroundInitialized = false;
 
 function computeScore(metrics, bodyMetrics) {
   if (!calibration) return null; // No score without calibration
@@ -736,19 +734,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       return false;
 
-    case 'SHOULD_START_CAMERA':
+    case 'SHOULD_START_CAMERA': {
       // A tab asks: "should I start the camera?"
-      // Only allow if no owner exists, or this tab IS the owner
+      const requestingTab = sender.tab?.id || null;
+
+      // If there's a stale owner, verify it still exists
+      if (ownerTabId && ownerTabId !== requestingTab) {
+        chrome.tabs.get(ownerTabId).then(() => {
+          // Owner tab still exists — deny
+          sendResponse({ start: false, ownerTab: ownerTabId });
+        }).catch(() => {
+          // Owner tab no longer exists — release stale lock and grant
+          console.log('[PostureGuard BG] Stale owner tab', ownerTabId, 'gone, releasing');
+          ownerTabId = requestingTab;
+          activeTabId = null;
+          sendResponse({ start: true });
+          console.log('[PostureGuard BG] Tab', ownerTabId, 'claimed ownership');
+        });
+        return true; // Async response
+      }
+
       if (!ownerTabId && settings.postureEnabled) {
-        ownerTabId = sender.tab?.id || null;
+        ownerTabId = requestingTab;
         sendResponse({ start: true });
         console.log('[PostureGuard BG] Tab', ownerTabId, 'claimed ownership');
-      } else if (ownerTabId === sender.tab?.id) {
+      } else if (ownerTabId === requestingTab) {
         sendResponse({ start: true });
       } else {
         sendResponse({ start: false, ownerTab: ownerTabId });
       }
       return false;
+    }
 
     case 'POSTURE_STATUS_UPDATE':
       // Relay to side panel
