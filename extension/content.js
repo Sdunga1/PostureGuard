@@ -61,6 +61,13 @@
         sendResponse({ ok: true });
         break;
 
+      case 'SET_PREVIEW':
+        window.dispatchEvent(new CustomEvent('posture:set-preview', {
+          detail: { enabled: message.enabled }
+        }));
+        sendResponse({ ok: true });
+        break;
+
       case 'START_CALIBRATION':
         if (window.PostureCal) {
           window.PostureCal.startCalibration();
