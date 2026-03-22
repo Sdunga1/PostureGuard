@@ -155,6 +155,10 @@
     try {
       const result = await human.detect(video);
 
+      // Store for live preview mesh overlay
+      lastDetectionResult = result;
+      if (previewVisible) drawMeshOverlay();
+
       // Extract body keypoints
       let bodyKeypoints = null;
       if (result.body && result.body.length > 0) {
@@ -256,10 +260,166 @@
     dispatchStatus('loading', 'Stopped');
   }
 
-  // ─── Camera Preview (Debug) ──────────────────────────────────
+  // ─── Camera Preview (Live Mode) ─────────────────────────────
+
+  const PREVIEW_W = 240;
+  const PREVIEW_H = 180;
 
   let previewEl = null;
+  let previewCanvas = null;
+  let previewCtx = null;
   let previewVisible = false;
+  let lastDetectionResult = null;
+  let currentScore = 75;
+
+  // Face oval indices for outline
+  const FACE_OVAL = [
+    10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288,
+    397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136,
+    172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109
+  ];
+
+  // Body skeleton connections (upper body only)
+  const BODY_CONNECTIONS = [
+    [5, 6],   // left shoulder → right shoulder
+    [5, 7],   // left shoulder → left elbow
+    [6, 8],   // right shoulder → right elbow
+    [7, 9],   // left elbow → left wrist
+    [8, 10],  // right elbow → right wrist
+    [5, 11],  // left shoulder → left hip
+    [6, 12],  // right shoulder → right hip
+    [11, 12]  // left hip → right hip
+  ];
+
+  function getScoreColor(score) {
+    if (score >= 70) return { main: '#52c41a', glow: 'rgba(82, 196, 26, 0.4)' };
+    if (score >= 50) return { main: '#faad14', glow: 'rgba(250, 173, 20, 0.4)' };
+    return { main: '#ff4d4f', glow: 'rgba(255, 77, 79, 0.4)' };
+  }
+
+  // Listen for score updates to color the mesh
+  window.addEventListener('posture:score', (e) => {
+    if (e.detail && e.detail.score !== undefined) {
+      currentScore = e.detail.score;
+    }
+  });
+
+  function drawMeshOverlay() {
+    if (!previewCtx || !previewVisible || !lastDetectionResult) return;
+
+    const ctx = previewCtx;
+    ctx.clearRect(0, 0, PREVIEW_W, PREVIEW_H);
+
+    const color = getScoreColor(currentScore);
+    const result = lastDetectionResult;
+
+    // Scale factors: detection runs at CAMERA_WIDTH x CAMERA_HEIGHT
+    const sx = PREVIEW_W / CAMERA_WIDTH;
+    const sy = PREVIEW_H / CAMERA_HEIGHT;
+
+    // ─── Draw face mesh ───
+    if (result.face && result.face.length > 0) {
+      const face = result.face[0];
+      const mesh = face.mesh || [];
+
+      if (mesh.length > 0) {
+        // Draw face oval outline
+        ctx.strokeStyle = color.main;
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = color.glow;
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        for (let i = 0; i < FACE_OVAL.length; i++) {
+          const idx = FACE_OVAL[i];
+          if (idx < mesh.length) {
+            // Mirror X for scaleX(-1) on video
+            const x = PREVIEW_W - (mesh[idx][0] * sx);
+            const y = mesh[idx][1] * sy;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+        }
+        ctx.closePath();
+        ctx.stroke();
+
+        // Draw mesh dots (every 5th point for performance)
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = color.main;
+        ctx.globalAlpha = 0.5;
+        for (let i = 0; i < mesh.length; i += 5) {
+          const x = PREVIEW_W - (mesh[i][0] * sx);
+          const y = mesh[i][1] * sy;
+          ctx.beginPath();
+          ctx.arc(x, y, 1, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1.0;
+
+        // Draw eye outlines
+        const LEFT_EYE_IDX = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246];
+        const RIGHT_EYE_IDX = [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398];
+
+        ctx.strokeStyle = color.main;
+        ctx.lineWidth = 1;
+        [LEFT_EYE_IDX, RIGHT_EYE_IDX].forEach((eyeIdx) => {
+          ctx.beginPath();
+          eyeIdx.forEach((idx, i) => {
+            if (idx < mesh.length) {
+              const x = PREVIEW_W - (mesh[idx][0] * sx);
+              const y = mesh[idx][1] * sy;
+              if (i === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            }
+          });
+          ctx.closePath();
+          ctx.stroke();
+        });
+      }
+    }
+
+    // ─── Draw body skeleton ───
+    if (result.body && result.body.length > 0) {
+      const kp = result.body[0].keypoints;
+      if (kp && kp.length > 0) {
+        ctx.strokeStyle = color.main;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = color.glow;
+        ctx.shadowBlur = 4;
+
+        BODY_CONNECTIONS.forEach(([a, b]) => {
+          if (a < kp.length && b < kp.length) {
+            const ka = kp[a];
+            const kb = kp[b];
+            if (ka.score > 0.3 && kb.score > 0.3) {
+              ctx.beginPath();
+              ctx.moveTo(PREVIEW_W - (ka.position[0] * sx), ka.position[1] * sy);
+              ctx.lineTo(PREVIEW_W - (kb.position[0] * sx), kb.position[1] * sy);
+              ctx.stroke();
+            }
+          }
+        });
+
+        // Draw joint dots
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = color.main;
+        kp.forEach((k, i) => {
+          if (i <= 12 && k.score > 0.3) { // Upper body only (0-12)
+            ctx.beginPath();
+            ctx.arc(PREVIEW_W - (k.position[0] * sx), k.position[1] * sy, 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        });
+      }
+    }
+
+    ctx.shadowBlur = 0;
+
+    // Update preview border color to match score
+    if (previewEl) {
+      previewEl.style.borderColor = color.main;
+      previewEl.style.boxShadow = '0 4px 16px ' + color.glow;
+    }
+  }
 
   function togglePreview() {
     if (!video || !stream) return;
@@ -269,12 +429,12 @@
       previewEl.id = 'posture-camera-preview';
       previewEl.style.cssText = [
         'position: fixed', 'bottom: 60px', 'left: 20px',
-        'width: 160px', 'height: 120px',
-        'border-radius: 8px', 'overflow: hidden',
-        'border: 2px solid rgba(255, 255, 255, 0.6)',
-        'box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3)',
-        'z-index: 2147483646', 'opacity: 0.85',
-        'transition: opacity 0.3s ease'
+        'width: ' + PREVIEW_W + 'px', 'height: ' + PREVIEW_H + 'px',
+        'border-radius: 10px', 'overflow: hidden',
+        'border: 2px solid rgba(0, 224, 255, 0.6)',
+        'box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5)',
+        'z-index: 2147483646',
+        'cursor: grab', 'user-select: none'
       ].join('; ');
 
       const previewVideo = document.createElement('video');
@@ -283,16 +443,62 @@
       previewVideo.muted = true;
       previewVideo.playsInline = true;
       previewVideo.style.cssText = [
+        'position: absolute', 'top: 0', 'left: 0',
         'width: 100%', 'height: 100%',
-        'object-fit: cover', 'transform: scaleX(-1)'
+        'object-fit: cover', 'transform: scaleX(-1)',
+        'pointer-events: none'
       ].join('; ');
       previewEl.appendChild(previewVideo);
+
+      // Canvas overlay for mesh
+      previewCanvas = document.createElement('canvas');
+      previewCanvas.width = PREVIEW_W;
+      previewCanvas.height = PREVIEW_H;
+      previewCanvas.style.cssText = [
+        'position: absolute', 'top: 0', 'left: 0',
+        'width: 100%', 'height: 100%',
+        'pointer-events: none'
+      ].join('; ');
+      previewEl.appendChild(previewCanvas);
+      previewCtx = previewCanvas.getContext('2d');
+
+      // ─── Drag logic ───
+      let isDragging = false;
+      let dragX = 0;
+      let dragY = 0;
+      let elLeft = 20;
+      let elTop = window.innerHeight - 60 - PREVIEW_H;
+
+      previewEl.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        dragX = e.clientX - elLeft;
+        dragY = e.clientY - elTop;
+        previewEl.style.cursor = 'grabbing';
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        elLeft = Math.max(0, Math.min(window.innerWidth - PREVIEW_W, e.clientX - dragX));
+        elTop = Math.max(0, Math.min(window.innerHeight - PREVIEW_H, e.clientY - dragY));
+        previewEl.style.left = elLeft + 'px';
+        previewEl.style.top = elTop + 'px';
+        previewEl.style.bottom = 'auto';
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+          previewEl.style.cursor = 'grab';
+        }
+      });
+
       document.documentElement.appendChild(previewEl);
     }
 
     previewVisible = !previewVisible;
     previewEl.style.display = previewVisible ? 'block' : 'none';
-    console.log('[PostureGuard] Camera preview:', previewVisible ? 'shown' : 'hidden');
+    console.log('[PostureGuard] Live preview:', previewVisible ? 'shown' : 'hidden');
   }
 
   function removePreview() {
