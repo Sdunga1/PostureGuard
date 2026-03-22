@@ -210,7 +210,6 @@ function TopHeader({ title = 'PostureGuard', subTitle = '', user = null, onSignI
           <div className="hidden md:flex items-center gap-8">
             <span className="font-label text-xs uppercase tracking-widest text-vs-primary cursor-pointer">Flow</span>
             <a href="/dashboard" className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Insights</a>
-            <span className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Biometrics</span>
           </div>
           {user ? (
             <div className="flex items-center gap-3">
@@ -346,20 +345,22 @@ function LandingScreen() {
 // Phase 1 → greeting fades out, quote appears alone, centred
 // Phase 2 → quote fades out, report card appears (clean – no name/quote above)
 function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn, onSignOut }) {
-  // Animation plays only once per day (tracked via sessionStorage date key)
+  // Animation plays when coming from extension (?id= in URL), once per day
+  // Navigating within the app (no ?id=) always skips it
   const hasSessionInUrl = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('id')
   const animKey = `pg_intro_shown_${new Date().toDateString()}`
   const alreadyShownToday = typeof window !== 'undefined' && !!sessionStorage.getItem(animKey)
-  const skipAnim = workoutCompleted || hasSessionInUrl || alreadyShownToday
+  // Play if: from extension AND not already shown today AND workout not completed
+  const skipAnim = workoutCompleted || alreadyShownToday || !hasSessionInUrl
   const [phase, setPhase] = useState(skipAnim ? 2 : 0)
   const [showDetails, setShowDetails] = useState(false)
 
   useEffect(() => {
-    if (skipAnim) return // Already at phase 2, no timers needed
-    // Mark as shown for today so navigating back doesn't replay it
+    if (skipAnim) return
+    // Mark as shown for today so repeated clicks on Open Health App skip it
     sessionStorage.setItem(animKey, '1')
-    const t1 = setTimeout(() => setPhase(1), 2200)   // show greeting 2.2 s
-    const t2 = setTimeout(() => setPhase(2), 4600)   // show quote 2.4 s, then card
+    const t1 = setTimeout(() => setPhase(1), 2200)
+    const t2 = setTimeout(() => setPhase(2), 4600)
     return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [skipAnim, animKey])
 
@@ -529,6 +530,22 @@ function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn,
                     className="vs-btn-primary w-full py-5 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm text-center block"
                   >
                     View All Sessions
+                  </a>
+                </div>
+              ) : hasSessionInUrl ? (
+                // Viewing a historical posture session from insights — no workout done yet
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={onStart}
+                    className="vs-btn-primary w-full py-5 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm"
+                  >
+                    Start Recovery Session
+                  </button>
+                  <a
+                    href="/dashboard"
+                    className="w-full py-3 rounded-lg font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-primary transition-colors border border-vs-outline-variant/20 hover:border-vs-primary/30 text-center block"
+                  >
+                    Back to Insights
                   </a>
                 </div>
               ) : (
