@@ -355,8 +355,9 @@ function LandingScreen() {
 // Phase 0 → greeting alone, centred, full screen
 // Phase 1 → greeting fades out, quote appears alone, centred
 // Phase 2 → quote fades out, report card appears (clean – no name/quote above)
-function IntroScreen({ onStart, user, sessionReport, onSignIn, onSignOut }) {
+function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn, onSignOut }) {
   const [phase, setPhase] = useState(0)
+  const [showDetails, setShowDetails] = useState(false)
 
   useEffect(() => {
     const t1 = setTimeout(() => setPhase(1), 2200)   // show greeting 2.2 s
@@ -366,8 +367,8 @@ function IntroScreen({ onStart, user, sessionReport, onSignIn, onSignOut }) {
 
   // Each panel: absolutely positioned, stacked in the same space
   const panel = (p) => ({
-    position: 'absolute',
-    inset: 0,
+    position: p === 2 ? 'relative' : 'absolute',
+    inset: p === 2 ? undefined : 0,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -390,8 +391,8 @@ function IntroScreen({ onStart, user, sessionReport, onSignIn, onSignOut }) {
       <div className="fixed inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(76,215,246,0.06) 0%, transparent 60%)' }} />
 
       <main className="relative flex-1 flex items-center justify-center px-6 pt-20 pb-10 overflow-hidden">
-        {/* Fixed-height stage — all three panels overlap here */}
-        <div className="relative w-full max-w-xl" style={{ height: '520px' }}>
+        {/* Stage — panels 0 & 1 are absolute, panel 2 flows naturally */}
+        <div className="relative w-full max-w-xl" style={{ minHeight: '520px' }}>
 
           {/* ── Panel 0 : Greeting ── */}
           <div style={panel(0)} className="px-4">
@@ -478,22 +479,30 @@ function IntroScreen({ onStart, user, sessionReport, onSignIn, onSignOut }) {
                       }</span>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
-                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Shoulder Health</span>
-                      <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">{sessionReport.metrics?.avgShoulderAngle != null ? `${Math.abs(sessionReport.metrics.avgShoulderAngle).toFixed(1)}°` : '--'}</span>
+                  {showDetails && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
+                        <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Shoulder Health</span>
+                        <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">{sessionReport.metrics?.avgShoulderAngle != null ? `${Math.abs(sessionReport.metrics.avgShoulderAngle).toFixed(1)}°` : '--'}</span>
+                      </div>
+                      <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
+                        <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Best Streak</span>
+                        <span className="font-headline text-3xl font-bold text-vs-primary mt-1">{(() => {
+                          const s = sessionReport.metrics?.longestGoodStreak;
+                          if (s == null) return '--';
+                          const m = Math.floor(s / 60);
+                          const sec = Math.round(s % 60);
+                          return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+                        })()}</span>
+                      </div>
                     </div>
-                    <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
-                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Best Streak</span>
-                      <span className="font-headline text-3xl font-bold text-vs-primary mt-1">{(() => {
-                        const s = sessionReport.metrics?.longestGoodStreak;
-                        if (s == null) return '--';
-                        const m = Math.floor(s / 60);
-                        const sec = Math.round(s % 60);
-                        return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
-                      })()}</span>
-                    </div>
-                  </div>
+                  )}
+                  <button
+                    onClick={() => setShowDetails(!showDetails)}
+                    className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-primary transition-colors self-center"
+                  >
+                    {showDetails ? 'Hide Details' : 'Show Details'}
+                  </button>
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -527,12 +536,35 @@ function IntroScreen({ onStart, user, sessionReport, onSignIn, onSignOut }) {
               </div>
 
               {/* CTA */}
-              <button
-                onClick={onStart}
-                className="vs-btn-primary w-full py-5 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm"
-              >
-                Start Recovery Session
-              </button>
+              {workoutCompleted && sessionReport ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-center gap-2 py-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span className="font-label text-[10px] uppercase tracking-widest text-green-400">Workout Complete</span>
+                  </div>
+                  <a
+                    href="/dashboard"
+                    className="vs-btn-primary w-full py-5 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm text-center block"
+                  >
+                    View All Sessions
+                  </a>
+                  <button
+                    onClick={onStart}
+                    className="w-full py-3 rounded-lg font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-primary transition-colors border border-vs-outline-variant/20 hover:border-vs-primary/30"
+                  >
+                    Start New Session
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={onStart}
+                  className="vs-btn-primary w-full py-5 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm"
+                >
+                  Start Recovery Session
+                </button>
+              )}
             </div>
           </div>
 
@@ -985,6 +1017,7 @@ export default function App() {
   const [sessionError, setSessionError] = useState(null)
   const [pendingSessionId, setPendingSessionId] = useState(null)
   const [workoutSaved, setWorkoutSaved] = useState(false)
+  const [workoutCompleted, setWorkoutCompleted] = useState(false)
   const supabaseRef = useRef(null)
 
   // ── Adaptive Exercises ──
@@ -1034,6 +1067,7 @@ export default function App() {
           if (response.ok && data.session) {
             setSessionReport(data.session)
             setSessionError(null)
+            if (data.session.metrics?.workout_data) setWorkoutCompleted(true)
           } else if (data.ownerMismatch) {
             setSessionError('This session belongs to a different account. Please sign in with the account you used in the extension.')
           } else if (data.requiresAuth) {
@@ -1050,6 +1084,7 @@ export default function App() {
             const { sessions } = await response.json()
             if (sessions && sessions.length > 0) {
               setSessionReport(sessions[0])
+              if (sessions[0].metrics?.workout_data) setWorkoutCompleted(true)
             }
           }
         }
@@ -1103,6 +1138,7 @@ export default function App() {
       setCurrentExerciseIndex(nextIdx)
       setTimeLeft(exercises[nextIdx].duration)
     } else {
+      setWorkoutCompleted(true)
       setScreen('complete')
     }
   }, [timeLeft, screen, currentExerciseIndex, exercises])
@@ -1177,6 +1213,7 @@ export default function App() {
       setCurrentExerciseIndex(nextIdx)
       setTimeLeft(exercises[nextIdx].duration)
     } else {
+      setWorkoutCompleted(true)
       setScreen('complete')
     }
   }, [currentExerciseIndex, exercises])
@@ -1247,7 +1284,7 @@ export default function App() {
   return (
     <>
       {screen === 'intro' && (
-        <IntroScreen onStart={handleStart} user={user} sessionReport={sessionReport} onSignIn={handleSignIn} onSignOut={handleSignOut} />
+        <IntroScreen onStart={handleStart} user={user} sessionReport={sessionReport} workoutCompleted={workoutCompleted} onSignIn={handleSignIn} onSignOut={handleSignOut} />
       )}
       {screen === 'countdown' && (
         <CountdownScreen onComplete={handleCountdownComplete} />
