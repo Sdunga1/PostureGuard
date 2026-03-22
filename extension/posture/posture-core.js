@@ -61,6 +61,16 @@
 
   async function initCamera() {
     try {
+      // Clean up any existing stream/video before creating new ones
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+      if (video && video.parentNode) {
+        video.parentNode.removeChild(video);
+        video = null;
+      }
+
       video = document.createElement('video');
       video.style.position = 'fixed';
       video.style.top = '-10000px';
@@ -85,8 +95,17 @@
       console.log('[PostureGuard] Camera initialized (' + CAMERA_WIDTH + 'x' + CAMERA_HEIGHT + ')');
       return true;
     } catch (err) {
-      console.error('[PostureGuard] Camera init failed:', err);
-      dispatchStatus('error', 'Camera access denied or unavailable');
+      console.error('[PostureGuard] Camera init failed:', err.name, err.message);
+      // Clean up on failure
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+      if (video && video.parentNode) {
+        video.parentNode.removeChild(video);
+        video = null;
+      }
+      dispatchStatus('error', 'Camera access denied: ' + (err.name || 'unknown error'));
       return false;
     }
   }
@@ -200,10 +219,21 @@
     dispatchStatus('loading', 'Initializing camera and detection model...');
 
     const cameraOk = await initCamera();
-    if (!cameraOk) return;
+    if (!cameraOk) {
+      console.warn('[PostureGuard] Camera initialization failed');
+      // Notify background that we couldn't start
+      chrome.runtime.sendMessage({ type: 'CAMERA_RELEASED' }).catch(() => {});
+      return;
+    }
 
     const humanOk = await initHuman();
-    if (!humanOk) return;
+    if (!humanOk) {
+      console.warn('[PostureGuard] Human.js initialization failed');
+      // Clean up camera if human init fails
+      stop();
+      chrome.runtime.sendMessage({ type: 'CAMERA_RELEASED' }).catch(() => {});
+      return;
+    }
 
     enabled = true;
     frameCount = 0;
