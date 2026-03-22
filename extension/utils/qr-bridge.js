@@ -4,7 +4,7 @@
 // Encodes session data into a URL and generates a QR code for the health app.
 
 const QR_BRIDGE = {
-  HEALTH_APP_URL: 'https://postureguard.vercel.app/session',
+  HEALTH_APP_URL: (typeof HEALTH_APP_URL !== 'undefined' ? HEALTH_APP_URL : 'https://posture-guard-hackasu.vercel.app') + '/session',
   MAX_PAYLOAD_BYTES: 2048,
 
   /**

@@ -58,7 +58,7 @@ const PostureGuardAuth = {
     if (!auth || !auth.refresh_token) return null;
 
     try {
-      const healthAppUrl = 'http://localhost:3000';
+      const healthAppUrl = typeof HEALTH_APP_URL !== 'undefined' ? HEALTH_APP_URL : 'https://posture-guard-hackasu.vercel.app';
       const res = await fetch(healthAppUrl + '/api/auth/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

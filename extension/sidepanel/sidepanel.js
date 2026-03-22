@@ -185,7 +185,7 @@
   }
 
   function getHealthAppUrl() {
-    return 'https://posture-guard-hackasu.vercel.app';
+    return typeof HEALTH_APP_URL !== 'undefined' ? HEALTH_APP_URL : 'https://posture-guard-hackasu.vercel.app';
   }
 
   // ─── Settings ─────────────────────────────────────────────────
