@@ -1,1048 +1,366 @@
-'use client'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { createServerSupabaseClient } from '@/lib/supabase'
+import Image from 'next/image'
+import StatsScroll from '@/components/StatsScroll'
+import BlogCards from '@/components/BlogCards'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { createBrowserClient } from '@/lib/supabase'
+// ── PostureGuard Landing Page ─────────────────────────────────────────────────
+export default async function LandingPage() {
+  const cookieStore = await cookies()
+  const supabase = createServerSupabaseClient(cookieStore)
+  const { data: { session } } = await supabase.auth.getSession()
 
-// ── Exercise Data ──────────────────────────────────────────────────────────────
-const EXERCISES = [
-  {
-    id: 1,
-    name: 'Chin Tucks',
-    subtitle: 'Neural Alignment Routine',
-    duration: 105,
-    target: '12 Reps',
-    tip: 'Keep your eyes level and tuck your chin toward your throat.',
-    sensor: 'C-Spine sensor at 94% accuracy.',
-    image: 'https://images.unsplash.com/photo-1654613412232-10aaf36df8a6?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85&w=900',
-  },
-  {
-    id: 2,
-    name: 'Shoulder Rolls',
-    subtitle: 'Postural Reset Protocol',
-    duration: 120,
-    target: '15 Reps',
-    tip: 'Roll shoulders backward in a slow, full circular motion.',
-    sensor: 'Shoulder sensor at 92% accuracy.',
-    image: 'https://images.pexels.com/photos/7289370/pexels-photo-7289370.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940',
-  },
-  {
-    id: 3,
-    name: 'Neck Stretches',
-    subtitle: 'Cervical Release Sequence',
-    duration: 90,
-    target: '10 Reps',
-    tip: 'Gently tilt head side to side, hold each position for 3 seconds.',
-    sensor: 'Neck sensor at 91% accuracy.',
-    image: 'https://images.pexels.com/photos/6339450/pexels-photo-6339450.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940',
-  },
-  {
-    id: 4,
-    name: 'Back Extensions',
-    subtitle: 'Lumbar Strengthening',
-    duration: 150,
-    target: '12 Reps',
-    tip: 'Extend spine tall, squeeze shoulder blades together firmly.',
-    sensor: 'Lumbar sensor at 89% accuracy.',
-    image: 'https://images.unsplash.com/photo-1563427632003-20f6943d3a6d?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85&w=900',
-  },
-  {
-    id: 5,
-    name: 'Hip Flexor Stretch',
-    subtitle: 'Lower Body Alignment',
-    duration: 120,
-    target: '30s each side',
-    tip: 'Lunge forward and press hips downward, feeling the stretch through hip flexors.',
-    sensor: 'Hip sensor at 93% accuracy.',
-    image: 'https://images.unsplash.com/photo-1618069174551-90141d7d4e7f?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85&w=900',
-  },
-]
-
-const AFFIRMING_QUOTES = [
-  'Your body is a temple, treat it with neural precision.',
-  'Every rep is a step toward perfect alignment.',
-  'Strength begins in the spine and flows through the mind.',
-]
-
-const AFFIRMING_QUOTES_END = [
-  'Today was a gift for your spine.',
-  'Your discipline is building a stronger tomorrow.',
-  'The neural pathways you forge today last a lifetime.',
-]
-
-// ── Utility ────────────────────────────────────────────────────────────────────
-function formatTime(seconds) {
-  const m = Math.floor(seconds / 60)
-  const s = seconds % 60
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-}
-
-// ── TopHeader ──────────────────────────────────────────────────────────────────
-function TopHeader({ title = 'PostureGuard', subTitle = '', user = null, onSignIn, onSignOut }) {
-  return (
-    <header className="fixed top-0 w-full z-50 bg-vs-bg/80 backdrop-blur-md border-b border-vs-outline-variant/20">
-      <div className="flex justify-between items-center w-full px-6 py-4">
-        <div className="flex items-center gap-3">
-          {/* Concentric circles logo — matching extension */}
-          <svg width="28" height="28" viewBox="0 0 56 56" fill="none">
-            <circle cx="28" cy="28" r="26" stroke="url(#hg)" strokeWidth="1.5" opacity="0.25"/>
-            <circle cx="28" cy="28" r="20" stroke="url(#hg)" strokeWidth="1.5" opacity="0.45"/>
-            <circle cx="28" cy="28" r="14" stroke="url(#hg)" strokeWidth="2"/>
-            <circle cx="28" cy="28" r="4" fill="#4CD7F6"/>
-            <defs><linearGradient id="hg" x1="0" y1="0" x2="56" y2="56"><stop offset="0%" stopColor="#4CD7F6"/><stop offset="100%" stopColor="#c2d8f8"/></linearGradient></defs>
-          </svg>
-          <span className="text-lg font-extrabold text-vs-on-surface font-headline tracking-tighter">{title}</span>
-          {subTitle && (
-            <>
-              <div className="h-4 w-px bg-vs-outline-variant/30 ml-1" />
-              <span className="font-label text-[10px] uppercase tracking-widest text-vs-primary/80 ml-1">{subTitle}</span>
-            </>
-          )}
-        </div>
-        <div className="flex items-center gap-6">
-          <div className="hidden md:flex items-center gap-8">
-            <span className="font-label text-xs uppercase tracking-widest text-vs-primary cursor-pointer">Flow</span>
-            <span className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Insights</span>
-            <span className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Biometrics</span>
-          </div>
-          {user ? (
-            <div className="flex items-center gap-3">
-              {user.user_metadata?.avatar_url ? (
-                <img src={user.user_metadata.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-vs-primary/30" />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-vs-primary to-vs-tertiary flex items-center justify-center text-vs-bg font-headline font-bold text-sm">
-                  {(user.user_metadata?.full_name || user.email || 'U').charAt(0).toUpperCase()}
-                </div>
-              )}
-              <button onClick={onSignOut} className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-primary transition-colors">
-                Sign Out
-              </button>
-            </div>
-          ) : onSignIn ? (
-            <button onClick={onSignIn} className="px-5 py-2 rounded-lg bg-vs-surface-mid border border-vs-outline-variant/20 hover:border-vs-primary/30 transition-all">
-              <span className="font-label text-xs text-vs-on-surface">Sign In</span>
-            </button>
-          ) : null}
-        </div>
-      </div>
-    </header>
-  )
-}
-
-// ── Screen: LANDING (public, unauthenticated) ────────────────────────────────
-function LandingScreen() {
-  const goToLogin = () => { window.location.href = '/login' }
+  // Logged-in users go straight to the app — landing page is for new visitors only
+  if (session) redirect('/flow')
 
   return (
-    <div className="bg-vs-bg min-h-screen flex flex-col">
-      <TopHeader onSignIn={goToLogin} />
+    <div className="bg-[#131313] text-[#e5e2e1] font-body min-h-screen">
 
-      <div className="fixed inset-0 dot-grid pointer-events-none" />
-      <div className="fixed inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 30%, rgba(76,215,246,0.06) 0%, transparent 60%)' }} />
-
-      {/* Hero */}
-      <main className="relative flex-1 flex flex-col items-center justify-center px-6 pt-24 pb-16">
-        <div className="text-center max-w-2xl mx-auto">
-          {/* Brand Icon */}
-          <div className="mb-8 flex justify-center">
-            <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-              <circle cx="40" cy="40" r="38" stroke="url(#lg)" strokeWidth="1.5" opacity="0.25"/>
-              <circle cx="40" cy="40" r="28" stroke="url(#lg)" strokeWidth="1.5" opacity="0.45"/>
-              <circle cx="40" cy="40" r="18" stroke="url(#lg)" strokeWidth="2"/>
-              <circle cx="40" cy="40" r="6" fill="#4CD7F6"/>
-              <defs><linearGradient id="lg" x1="0" y1="0" x2="80" y2="80"><stop offset="0%" stopColor="#4CD7F6"/><stop offset="100%" stopColor="#c2d8f8"/></linearGradient></defs>
+      {/* ── NAV ──────────────────────────────────────────────────────── */}
+      <nav className="fixed top-0 w-full z-50">
+        <div className="flex justify-between items-center px-8 py-4 max-w-screen-2xl mx-auto bg-[#131313]/60 backdrop-blur-xl border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <svg width="28" height="28" viewBox="0 0 56 56" fill="none">
+              <circle cx="28" cy="28" r="26" stroke="url(#navGrad)" strokeWidth="1.5" opacity="0.3"/>
+              <circle cx="28" cy="28" r="20" stroke="url(#navGrad)" strokeWidth="1.5" opacity="0.5"/>
+              <circle cx="28" cy="28" r="14" stroke="url(#navGrad)" strokeWidth="2"/>
+              <circle cx="28" cy="28" r="4" fill="#c3f5ff"/>
+              <defs><linearGradient id="navGrad" x1="0" y1="0" x2="56" y2="56"><stop offset="0%" stopColor="#c3f5ff"/><stop offset="100%" stopColor="#66d9cc"/></linearGradient></defs>
             </svg>
+            <span className="text-2xl font-bold tracking-tighter text-[#c3f5ff] font-headline uppercase">PostureGuard</span>
           </div>
-
-          <h1 className="text-5xl md:text-7xl font-headline font-bold tracking-tight text-vs-on-surface mb-4">
-            Your posture,<br />
-            <span className="vs-gradient-text">reimagined.</span>
-          </h1>
-          <p className="text-lg md:text-xl text-vs-on-surface-variant font-light max-w-lg mx-auto mb-12 leading-relaxed">
-            AI-powered posture detection and personalized recovery exercises.
-            Track, improve, and protect your spine — all from your browser.
-          </p>
-
-          {/* CTA */}
-          <button
-            onClick={goToLogin}
-            className="vs-btn-primary px-12 py-4 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm mb-4"
-          >
-            Get Started
-          </button>
-          <p className="text-xs text-vs-on-surface-variant/50">Free during beta. No credit card required.</p>
+          <div className="hidden md:flex items-center space-x-12">
+            <a className="font-headline tracking-tight uppercase text-xs font-bold text-[#c3f5ff] border-b-2 border-[#c3f5ff] pb-1" href="#home">Home</a>
+            <a className="font-headline tracking-tight uppercase text-xs font-bold text-[#e5e2e1]/70 hover:text-[#c3f5ff] transition-colors" href="#stats">Stats</a>
+            <a className="font-headline tracking-tight uppercase text-xs font-bold text-[#e5e2e1]/70 hover:text-[#c3f5ff] transition-colors" href="#workflow">Workflow</a>
+            <a className="font-headline tracking-tight uppercase text-xs font-bold text-[#e5e2e1]/70 hover:text-[#c3f5ff] transition-colors" href="#core">Core</a>
+            <a className="font-headline tracking-tight uppercase text-xs font-bold text-[#e5e2e1]/70 hover:text-[#c3f5ff] transition-colors" href="#blogs">Blogs</a>
+          </div>
+          <Link href="/login">
+            <button className="bg-[#c3f5ff] text-[#00363d] px-6 py-2 rounded-full font-headline text-xs font-bold uppercase tracking-widest hover:bg-[#00daf3] transition-all active:scale-95 shadow-[0_0_20px_rgba(195,245,255,0.2)]">
+              Sign In
+            </button>
+          </Link>
         </div>
+      </nav>
 
-        {/* Features */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mt-20">
-          <div className="glass-card rounded-2xl p-6 text-center">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-vs-primary/10 flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4CD7F6" strokeWidth="2">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
-              </svg>
-            </div>
-            <h3 className="font-headline font-semibold text-vs-on-surface mb-2">Real-Time Detection</h3>
-            <p className="text-sm text-vs-on-surface-variant">Camera-based posture analysis runs locally in your browser. Your data never leaves your device.</p>
-          </div>
-          <div className="glass-card rounded-2xl p-6 text-center">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-vs-primary/10 flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4CD7F6" strokeWidth="2">
-                <path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M20 12a8 8 0 0 0-8-8v8h8z"/>
-              </svg>
-            </div>
-            <h3 className="font-headline font-semibold text-vs-on-surface mb-2">AI Coaching</h3>
-            <p className="text-sm text-vs-on-surface-variant">Claude-powered nudges correct your posture in real time with personalized advice.</p>
-          </div>
-          <div className="glass-card rounded-2xl p-6 text-center">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-vs-primary/10 flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4CD7F6" strokeWidth="2">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-              </svg>
-            </div>
-            <h3 className="font-headline font-semibold text-vs-on-surface mb-2">Recovery Sessions</h3>
-            <p className="text-sm text-vs-on-surface-variant">Guided exercises tailored to your posture issues. Track progress across sessions.</p>
-          </div>
-        </div>
+      {/* ── MAIN ─────────────────────────────────────────────────────── */}
+      <main className="relative min-h-screen overflow-hidden scanline-bg pt-16">
+        {/* Scanline overlay */}
+        <div className="absolute inset-0 pointer-events-none hud-scanlines opacity-50" />
 
-        {/* How it works */}
-        <div className="max-w-3xl mx-auto mt-24 text-center">
-          <h2 className="font-headline text-2xl font-bold text-vs-on-surface mb-12">How it works</h2>
-          <div className="flex flex-col md:flex-row items-center justify-center gap-8">
+        {/* ── HERO ── */}
+        <section id="home" className="max-w-screen-2xl mx-auto px-8 md:px-16 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10 py-12 lg:pt-16 lg:pb-8">
+
+          {/* Left: Content */}
+          <div className="lg:col-span-6 z-10">
+            <h1 className="font-headline text-5xl md:text-7xl font-bold tracking-tighter text-[#e5e2e1] mb-4 leading-[0.9]">
+              Your posture,&nbsp;<br />
+              <span className="text-[#c3f5ff]/80">reimagined.</span>
+            </h1>
+
+            <p className="font-headline text-[#c3f5ff]/70 text-sm md:text-base mb-6 uppercase tracking-widest font-bold">
+              For engineers, designers, and writers who sit 6+ hours a day.
+            </p>
+
+            <p className="font-body text-[#bac9cc] text-lg md:text-xl max-w-xl mb-10 leading-relaxed font-light">
+              PostureGuard monitors your posture through your webcam and sends real-time nudges before pain sets in. Free during beta.
+            </p>
+
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 items-start">
+                <Link href="/login">
+                  <button className="bg-[#c3f5ff] text-[#00363d] px-12 py-4 rounded-full font-headline text-sm font-bold uppercase tracking-widest hover:shadow-[0_0_30px_rgba(195,245,255,0.3)] transition-all">
+                    Get Started
+                  </button>
+                </Link>
+              </div>
+              <div className="pl-1">
+                <Link href="/privacy" className="text-[#bac9cc] hover:text-[#c3f5ff] transition-colors font-headline text-xs uppercase tracking-widest">
+                  Review Privacy Protocol →
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Spine HUD */}
+          <div className="lg:col-span-6 relative flex justify-center items-center lg:pr-12">
+            <div className="relative w-full max-w-lg aspect-square flex items-center justify-center">
+              {/* Rotating ring */}
+              <div className="absolute inset-12 border-[0.5px] border-[#c3f5ff]/5 rounded-full border-dashed animate-spin-slow" />
+
+              {/* SVG Spine — S-curved with lordosis (cervical/lumbar) & kyphosis (thoracic) */}
+              <svg className="w-80 h-auto drop-shadow-[0_0_20px_rgba(195,245,255,0.2)]" viewBox="0 0 260 520">
+                <defs>
+                  <linearGradient id="vertebraGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%"   stopColor="rgba(195,245,255,0.12)" />
+                    <stop offset="50%"  stopColor="rgba(195,245,255,0.03)" />
+                    <stop offset="100%" stopColor="rgba(195,245,255,0.12)" />
+                  </linearGradient>
+                  <linearGradient id="lumbarGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%"   stopColor="rgba(255,107,74,0.1)" />
+                    <stop offset="50%"  stopColor="rgba(255,107,74,0.02)" />
+                    <stop offset="100%" stopColor="rgba(255,107,74,0.1)" />
+                  </linearGradient>
+                </defs>
+                <g>
+                  {/* S-curve spine line */}
+                  <path d="M148 15 C158 60, 155 80, 140 120 C125 160, 115 200, 110 240 C108 270, 120 310, 145 360 C155 380, 148 420, 140 470" fill="none" stroke="rgba(195,245,255,0.08)" strokeWidth="0.5" />
+
+                  {/* ── Cervical C1-C5 (lordotic curve — offsets right) ── */}
+                  <g className="vertebra-anim" style={{ animationDelay: '0.05s' }}>
+                    <rect x="126" y="12" width="42" height="10" rx="4" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.9" />
+                    <ellipse cx="147" cy="24" rx="14" ry="1.2" fill="#c3f5ff" opacity="0.15" className="animate-disc-pulse" style={{ animationDelay: '0s' }} />
+                  </g>
+                  <g className="vertebra-anim" style={{ animationDelay: '0.1s' }}>
+                    <rect x="123" y="28" width="48" height="11" rx="4" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.9" />
+                    <ellipse cx="147" cy="41" rx="17" ry="1.2" fill="#c3f5ff" opacity="0.15" className="animate-disc-pulse" style={{ animationDelay: '0.05s' }} />
+                  </g>
+                  <g className="vertebra-anim" style={{ animationDelay: '0.15s' }}>
+                    <rect x="119" y="45" width="54" height="12" rx="4" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.9" />
+                    <ellipse cx="146" cy="59" rx="20" ry="1.3" fill="#c3f5ff" opacity="0.15" className="animate-disc-pulse" style={{ animationDelay: '0.1s' }} />
+                  </g>
+                  <g className="vertebra-anim" style={{ animationDelay: '0.2s' }}>
+                    <rect x="114" y="63" width="60" height="13" rx="4" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.9" />
+                    <ellipse cx="144" cy="78" rx="23" ry="1.3" fill="#c3f5ff" opacity="0.15" className="animate-disc-pulse" style={{ animationDelay: '0.15s' }} />
+                  </g>
+                  <g className="vertebra-anim" style={{ animationDelay: '0.25s' }}>
+                    <rect x="108" y="82" width="66" height="14" rx="4" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.85" />
+                    <ellipse cx="141" cy="98" rx="26" ry="1.4" fill="#c3f5ff" opacity="0.15" className="animate-disc-pulse" style={{ animationDelay: '0.2s' }} />
+                  </g>
+
+                  {/* ── Thoracic T1-T6 (kyphotic curve — offsets left) ── */}
+                  <g className="vertebra-anim" style={{ animationDelay: '0.3s' }}>
+                    <rect x="100" y="102" width="72" height="16" rx="5" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.8" />
+                    <ellipse cx="136" cy="120" rx="28" ry="1.5" fill="#c3f5ff" opacity="0.12" className="animate-disc-pulse" style={{ animationDelay: '0.25s' }} />
+                  </g>
+                  <g className="vertebra-anim" style={{ animationDelay: '0.35s' }}>
+                    <rect x="93" y="124" width="78" height="17" rx="5" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.8" />
+                    <ellipse cx="132" cy="143" rx="30" ry="1.5" fill="#c3f5ff" opacity="0.12" className="animate-disc-pulse" style={{ animationDelay: '0.3s' }} />
+                  </g>
+                  <g className="vertebra-anim" style={{ animationDelay: '0.4s' }}>
+                    <rect x="87" y="147" width="84" height="18" rx="5" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.75" />
+                    <ellipse cx="129" cy="167" rx="32" ry="1.6" fill="#c3f5ff" opacity="0.12" className="animate-disc-pulse" style={{ animationDelay: '0.35s' }} />
+                  </g>
+                  <g className="vertebra-anim" style={{ animationDelay: '0.45s' }}>
+                    <rect x="83" y="171" width="88" height="19" rx="5" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.75" />
+                    <ellipse cx="127" cy="192" rx="34" ry="1.6" fill="#c3f5ff" opacity="0.12" className="animate-disc-pulse" style={{ animationDelay: '0.4s' }} />
+                  </g>
+                  <g className="vertebra-anim" style={{ animationDelay: '0.5s' }}>
+                    <rect x="80" y="196" width="92" height="20" rx="5" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.7" />
+                    <ellipse cx="126" cy="218" rx="36" ry="1.7" fill="#c3f5ff" opacity="0.1" className="animate-disc-pulse" style={{ animationDelay: '0.45s' }} />
+                  </g>
+                  <g className="vertebra-anim" style={{ animationDelay: '0.55s' }}>
+                    <rect x="79" y="222" width="96" height="21" rx="5" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.7" />
+                    <ellipse cx="127" cy="245" rx="38" ry="1.8" fill="#c3f5ff" opacity="0.1" className="animate-disc-pulse" style={{ animationDelay: '0.5s' }} />
+                  </g>
+
+                  {/* ── Lumbar L1-L4 (lordotic curve — offsets right, warning color) ── */}
+                  <g className="vertebra-anim" style={{ animationDelay: '0.6s' }}>
+                    <rect x="84" y="250" width="100" height="24" rx="6" fill="url(#lumbarGradient)" stroke="#ff6b4a" strokeWidth="0.8" opacity="0.8" />
+                    <ellipse cx="134" cy="277" rx="40" ry="2" fill="#ff6b4a" opacity="0.1" className="animate-disc-pulse" style={{ animationDelay: '0.55s' }} />
+                  </g>
+                  <g className="vertebra-anim" style={{ animationDelay: '0.65s' }}>
+                    <rect x="92" y="281" width="108" height="27" rx="6" fill="url(#lumbarGradient)" stroke="#ff6b4a" strokeWidth="0.8" opacity="0.8" />
+                    <ellipse cx="146" cy="311" rx="42" ry="2.2" fill="#ff6b4a" opacity="0.1" className="animate-disc-pulse" style={{ animationDelay: '0.6s' }} />
+                  </g>
+                  <g className="vertebra-anim" style={{ animationDelay: '0.7s' }}>
+                    <rect x="99" y="315" width="114" height="30" rx="6" fill="url(#lumbarGradient)" stroke="#ff6b4a" strokeWidth="0.8" opacity="0.8" />
+                    <ellipse cx="156" cy="348" rx="44" ry="2.4" fill="#ff6b4a" opacity="0.1" className="animate-disc-pulse" style={{ animationDelay: '0.65s' }} />
+                  </g>
+                  <g className="vertebra-anim" style={{ animationDelay: '0.75s' }}>
+                    <rect x="103" y="352" width="118" height="32" rx="6" fill="url(#lumbarGradient)" stroke="#ff6b4a" strokeWidth="0.8" opacity="0.75" />
+                    <ellipse cx="162" cy="387" rx="46" ry="2.5" fill="#ff6b4a" opacity="0.08" className="animate-disc-pulse" style={{ animationDelay: '0.7s' }} />
+                  </g>
+
+                  {/* ── Sacral S1-S2 (curves back) ── */}
+                  <g className="vertebra-anim" style={{ animationDelay: '0.8s' }}>
+                    <rect x="96" y="392" width="112" height="28" rx="6" fill="url(#vertebraGradient)" stroke="#66d9cc" strokeWidth="0.8" opacity="0.7" />
+                    <ellipse cx="152" cy="423" rx="42" ry="2" fill="#66d9cc" opacity="0.1" className="animate-disc-pulse" style={{ animationDelay: '0.75s' }} />
+                  </g>
+                  <g className="vertebra-anim" style={{ animationDelay: '0.85s' }}>
+                    <rect x="89" y="427" width="102" height="25" rx="6" fill="url(#vertebraGradient)" stroke="#66d9cc" strokeWidth="0.8" opacity="0.65" />
+                    <ellipse cx="140" cy="455" rx="38" ry="1.8" fill="#66d9cc" opacity="0.08" className="animate-disc-pulse" style={{ animationDelay: '0.8s' }} />
+                  </g>
+                  <g className="vertebra-anim" style={{ animationDelay: '0.9s' }}>
+                    <rect x="84" y="459" width="88" height="20" rx="6" fill="url(#vertebraGradient)" stroke="#66d9cc" strokeWidth="0.8" opacity="0.6" />
+                  </g>
+
+                  {/* HUD Connectors */}
+                  <path d="M168 17 L210 17" fill="none" stroke="#c3f5ff" strokeDasharray="2 2" strokeWidth="0.5" />
+                  <circle cx="168" cy="17" r="1.5" fill="#c3f5ff" />
+                  <path d="M200 340 L230 340" fill="none" stroke="#ff6b4a" strokeDasharray="2 2" strokeWidth="0.5" />
+                  <circle cx="200" cy="340" r="1.5" fill="#ff6b4a" />
+                  <path d="M198 440 L228 440" fill="none" stroke="#66d9cc" strokeDasharray="2 2" strokeWidth="0.5" />
+                  <circle cx="198" cy="440" r="1.5" fill="#66d9cc" />
+                </g>
+              </svg>
+
+              {/* Readout: CERVICAL */}
+              <div className="absolute top-8 right-0 font-headline text-[10px] tracking-widest text-[#c3f5ff] bg-[#131313]/80 backdrop-blur px-3 py-1 border-l-2 border-[#c3f5ff] shadow-[0_0_15px_rgba(195,245,255,0.1)]">
+                CERVICAL ●──── 94%
+              </div>
+              {/* Readout: LUMBAR */}
+              <div className="absolute bottom-36 right-0 font-headline text-[10px] tracking-widest text-[#ff6b4a] bg-[#ff6b4a]/10 backdrop-blur px-3 py-1 border-l-2 border-[#ff6b4a] shadow-[0_0_15px_rgba(255,107,74,0.15)]">
+                LUMBAR ●──── 72% <span className="text-xs font-bold">⚠</span>
+              </div>
+              {/* Readout: SACRAL */}
+              <div className="absolute bottom-20 right-0 font-headline text-[10px] tracking-widest text-[#66d9cc] bg-[#66d9cc]/10 backdrop-blur px-3 py-1 border-l-2 border-[#66d9cc] shadow-[0_0_15px_rgba(102,217,204,0.1)]">
+                SACRAL ●──── 88%
+              </div>
+
+              {/* Ambient glow */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-96 bg-[#c3f5ff]/10 blur-[80px] rounded-full -z-10" />
+            </div>
+          </div>
+        </section>
+
+        {/* ── STATS ── */}
+        <section id="stats" className="max-w-screen-2xl mx-auto px-8 md:px-16 py-16 border-y border-white/5 bg-[#0e0e0e]/30">
+          <div className="text-center mb-8">
+            <h2 className="font-headline text-sm uppercase tracking-[0.4em] text-[#c3f5ff]/60 font-bold mb-4">The Problem</h2>
+            <div className="w-12 h-px bg-[#c3f5ff]/30 mx-auto" />
+          </div>
+          <StatsScroll />
+        </section>
+
+        {/* ── THE WORKFLOW ── */}
+        <section id="workflow" className="max-w-screen-2xl mx-auto px-8 md:px-16 py-32">
+          <div className="text-center mb-24">
+            <h2 className="font-headline text-sm uppercase tracking-[0.4em] text-[#c3f5ff]/60 font-bold mb-4">The Workflow</h2>
+            <div className="w-12 h-px bg-[#c3f5ff]/30 mx-auto" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[
-              { step: '01', title: 'Install Extension', desc: 'Add PostureGuard to Chrome in one click' },
-              { step: '02', title: 'Calibrate', desc: 'Sit up straight and capture your ideal posture' },
-              { step: '03', title: 'Get Coached', desc: 'AI monitors and nudges you to maintain posture' },
-              { step: '04', title: 'Recover', desc: 'Personalized exercises based on your session data' },
-            ].map((item, i) => (
-              <div key={i} className="flex flex-col items-center">
-                <span className="font-headline text-3xl font-bold vs-gradient-text mb-2">{item.step}</span>
-                <h3 className="font-headline font-semibold text-vs-on-surface text-sm mb-1">{item.title}</h3>
-                <p className="text-xs text-vs-on-surface-variant max-w-[140px]">{item.desc}</p>
+              { n: '01', title: 'Install Extension', body: 'No hardware required. PostureGuard runs entirely in your browser. Local processing ensures privacy.' },
+              { n: '02', title: 'Calibrate Baseline', body: 'Sit in your optimal position for 30 seconds. This creates a personalized biometric profile.' },
+              { n: '03', title: 'Passive Monitor', body: 'Work as normal. Receive subtle HUD-style nudges when the system detects spinal deviation.' },
+              { n: '04', title: 'Analyze & Heal', body: "Get AI-driven insights into your sitting habits and specialized recovery routines at the day's end." },
+            ].map(({ n, title, body }) => (
+              <div key={n} className="group relative bg-[#0e0e0e] border border-white/5 p-8 transition-all hover:border-[#c3f5ff]/30 hover:bg-[#1c1b1b] cursor-default">
+                <div className="font-headline text-6xl font-bold text-[#c3f5ff]/10 mb-6 group-hover:text-[#c3f5ff]/20 transition-colors">{n}</div>
+                <h3 className="font-headline text-sm font-bold text-[#c3f5ff] mb-3 uppercase tracking-widest">{title}</h3>
+                <p className="font-body text-[#bac9cc] text-xs font-light leading-relaxed">{body}</p>
               </div>
             ))}
           </div>
-        </div>
+        </section>
 
-        {/* Footer */}
-        <footer className="mt-24 text-center">
-          <p className="text-xs text-vs-on-surface-variant/40">
-            Built for HackASU 2026 &middot; Privacy-first &middot; Camera data stays on your device
-          </p>
-        </footer>
-      </main>
-    </div>
-  )
-}
-
-// ── Screen: INTRO ─────────────────────────────────────────────────────────────
-// Phase 0 → greeting alone, centred, full screen
-// Phase 1 → greeting fades out, quote appears alone, centred
-// Phase 2 → quote fades out, report card appears (clean – no name/quote above)
-function IntroScreen({ onStart, user, sessionReport, onSignIn, onSignOut }) {
-  const [phase, setPhase] = useState(0)
-
-  useEffect(() => {
-    const t1 = setTimeout(() => setPhase(1), 2200)   // show greeting 2.2 s
-    const t2 = setTimeout(() => setPhase(2), 4600)   // show quote 2.4 s, then card
-    return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [])
-
-  // Each panel: absolutely positioned, stacked in the same space
-  const panel = (p) => ({
-    position: 'absolute',
-    inset: 0,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'column',
-    textAlign: 'center',
-    opacity: phase === p ? 1 : 0,
-    transform: phase === p
-      ? 'translateY(0)'
-      : phase < p
-        ? 'translateY(28px)'
-        : 'translateY(-28px)',
-    transition: 'opacity 0.75s ease, transform 0.75s ease',
-    pointerEvents: phase === p ? 'auto' : 'none',
-  })
-
-  return (
-    <div className="bg-vs-bg min-h-screen flex flex-col">
-      <TopHeader user={user} onSignIn={onSignIn} onSignOut={onSignOut} />
-      <div className="fixed inset-0 dot-grid pointer-events-none" />
-      <div className="fixed inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(76,215,246,0.06) 0%, transparent 60%)' }} />
-
-      <main className="relative flex-1 flex items-center justify-center px-6 pt-20 pb-10 overflow-hidden">
-        {/* Fixed-height stage — all three panels overlap here */}
-        <div className="relative w-full max-w-xl" style={{ height: '520px' }}>
-
-          {/* ── Panel 0 : Greeting ── */}
-          <div style={panel(0)} className="px-4">
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-headline font-bold tracking-tight text-vs-on-surface">
-              Welcome back,<br /><span className="vs-gradient-text">{user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'there'}.</span>
-            </h1>
+        {/* ── CORE PROTOCOLS ── */}
+        <section id="core" className="max-w-screen-2xl mx-auto px-8 md:px-16 pb-32">
+          <div className="text-center mb-16">
+            <h2 className="font-headline text-xs uppercase tracking-[0.4em] text-[#c3f5ff]/60 font-bold mb-4">Core Protocols</h2>
+            <div className="w-12 h-px bg-[#c3f5ff]/30 mx-auto" />
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Card 1 */}
+            <div className="group relative bg-[#1c1b1b] p-8 border-l-2 border-[#66d9cc] transition-all hover:bg-[#2a2a2a] cursor-default">
+              <div className="flex justify-between items-start mb-12">
+                <div className="bg-[#66d9cc]/10 p-3 rounded-lg">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M9.5 14.5L3 21M3 3v5l2 2M21 3h-5l-2 2M21 21l-6-6m0 0l-1.5-1.5M15 15l1.5 1.5M9 9l1.5 1.5M9 9l6-6M9 9L3 15" stroke="#66d9cc" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+                  </svg>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#66d9cc] animate-pulse-soft" />
+                  <span className="font-headline text-[9px] uppercase tracking-tighter text-[#66d9cc]/60">Live Monitoring</span>
+                </div>
+              </div>
+              <h3 className="font-headline text-xl font-bold text-[#e5e2e1] mb-3 uppercase tracking-tight">Real-Time Detection</h3>
+              <p className="font-body text-[#bac9cc] text-sm font-light leading-relaxed">Detects slouching via your webcam in real time.</p>
+              <div className="mt-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Link href="/login" className="text-[#66d9cc] font-headline text-[10px] uppercase tracking-widest hover:underline underline-offset-4">Initialize Scan →</Link>
+              </div>
+            </div>
+            {/* Card 2 */}
+            <div className="group relative bg-[#1c1b1b] p-8 border-l-2 border-[#c3f5ff] transition-all hover:bg-[#2a2a2a] cursor-default">
+              <div className="flex justify-between items-start mb-12">
+                <div className="bg-[#c3f5ff]/10 p-3 rounded-lg">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c3f5ff" strokeWidth="1.5" strokeLinecap="round">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+                    <circle cx="12" cy="9" r="2.5" />
+                  </svg>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#c3f5ff] animate-pulse-soft" />
+                  <span className="font-headline text-[9px] uppercase tracking-tighter text-[#c3f5ff]/60">Active Engine</span>
+                </div>
+              </div>
+              <h3 className="font-headline text-xl font-bold text-[#e5e2e1] mb-3 uppercase tracking-tight">AI Coaching</h3>
+              <p className="font-body text-[#bac9cc] text-sm font-light leading-relaxed">Get gentle AI-powered reminders to fix your sitting position.</p>
+              <div className="mt-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Link href="/login" className="text-[#c3f5ff] font-headline text-[10px] uppercase tracking-widest hover:underline underline-offset-4">Access Core →</Link>
+              </div>
+            </div>
+            {/* Card 3 */}
+            <div className="group relative bg-[#1c1b1b] p-8 border-l-2 border-[#c3f5ff] transition-all hover:bg-[#2a2a2a] cursor-default">
+              <div className="flex justify-between items-start mb-12">
+                <div className="bg-[#c3f5ff]/10 p-3 rounded-lg">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c3f5ff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 19V5a2 2 0 012-2h8.5L18 6.5V19a2 2 0 01-2 2H6a2 2 0 01-2-2z" />
+                    <polyline points="14 3 14 8 19 8" />
+                    <line x1="8" y1="13" x2="16" y2="13" />
+                    <line x1="8" y1="17" x2="13" y2="17" />
+                  </svg>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#c3f5ff] animate-pulse-soft" />
+                  <span className="font-headline text-[9px] uppercase tracking-tighter text-[#c3f5ff]/60">Protocol Ready</span>
+                </div>
+              </div>
+              <h3 className="font-headline text-xl font-bold text-[#e5e2e1] mb-3 uppercase tracking-tight">Recovery Sessions</h3>
+              <p className="font-body text-[#bac9cc] text-sm font-light leading-relaxed">Access guided stretches to reverse the effects of sitting.</p>
+              <div className="mt-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Link href="/login" className="text-[#c3f5ff] font-headline text-[10px] uppercase tracking-widest hover:underline underline-offset-4">Load Session →</Link>
+              </div>
+            </div>
+          </div>
+        </section>
 
-          {/* ── Panel 1 : Quote ── */}
-          <div style={panel(1)} className="px-4">
-            <p className="text-2xl md:text-3xl font-headline italic text-vs-on-surface-variant font-light max-w-lg leading-relaxed">
-              &ldquo;{AFFIRMING_QUOTES[0]}&rdquo;
+        {/* ── BLOGS ── */}
+        <section id="blogs" className="max-w-screen-2xl mx-auto px-8 md:px-16 pb-32">
+          <div className="text-center mb-16">
+            <h2 className="font-headline text-xs uppercase tracking-[0.4em] text-[#c3f5ff]/60 font-bold mb-4">From the Blog</h2>
+            <p className="font-body text-[#bac9cc]/60 text-sm mt-4 max-w-lg mx-auto">Insights on posture science, AI-driven health, and building better work habits.</p>
+            <div className="w-12 h-px bg-[#c3f5ff]/30 mx-auto mt-4" />
+          </div>
+          <BlogCards />
+        </section>
+
+        {/* ── FINAL CTA ── */}
+        <section className="w-full bg-[#c3f5ff]/5 border-y border-[#c3f5ff]/10 py-32 px-8 mb-12">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="font-headline text-5xl md:text-7xl font-bold tracking-tighter text-[#e5e2e1] mb-8 uppercase">Ready to realign?</h2>
+            <p className="font-body text-[#bac9cc] text-lg mb-12 max-w-xl mx-auto font-light leading-relaxed">
+              Be among the first to fix your posture for good.
             </p>
-          </div>
-
-          {/* ── Panel 2 : Report Card ── */}
-          <div style={{ ...panel(2), alignItems: 'stretch', overflowY: 'auto' }}>
-            <div className="glass-panel synaptic-glow rim-light rounded-2xl p-8 border border-vs-outline-variant/10 flex flex-col gap-6 w-full">
-              {/* Card Header */}
-              <div className="flex justify-between items-end border-b border-vs-outline-variant/10 pb-5">
-                <div className="text-left">
-                  <span className="font-label text-[10px] uppercase tracking-[0.2em] text-vs-primary/80">Analysis Meta</span>
-                  <h2 className="font-headline text-2xl font-bold mt-1 text-vs-on-surface">Digital Synthesis Report</h2>
-                </div>
-                <div className="text-right">
-                  <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant/60">Session ID</span>
-                  <p className="font-mono text-sm text-vs-on-surface-variant mt-0.5">{sessionReport?.session_id ? sessionReport.session_id.slice(0, 8).toUpperCase() : 'PG-LIVE'}</p>
-                </div>
-              </div>
-
-              {/* Metrics */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
-                  <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Posture Score</span>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="font-headline text-3xl font-bold text-vs-primary">{sessionReport?.avg_score ?? 78}%</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4CD7F6" strokeWidth="2.5">
-                      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
-                  <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Head Tilt</span>
-                  <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">{sessionReport?.metrics?.avgHeadTilt ? Math.round(sessionReport.metrics.avgHeadTilt) : 12}°</span>
-                </div>
-                <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
-                  <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Slouch Angle</span>
-                  <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">{sessionReport?.metrics?.avgSlouchAngle ? sessionReport.metrics.avgSlouchAngle.toFixed(1) : '4.5'}°</span>
-                </div>
-              </div>
-
-              {/* Neural Stream Viz */}
-              <div className="w-full h-24 rounded-xl bg-vs-surface-low flex items-end justify-center overflow-hidden relative px-4 pb-3 pt-2">
-                <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(76,215,246,0.08) 0%, transparent 50%, rgba(194,216,248,0.06) 100%)' }} />
-                <div className="flex gap-1.5 items-end h-14">
-                  {[8, 10, 6, 9, 7, 11, 5, 10, 8, 12, 7, 9, 6, 11, 8].map((h, i) => (
-                    <div
-                      key={i}
-                      className="w-2 rounded-t-full"
-                      style={{
-                        height: `${h * 3.5}px`,
-                        background: i % 3 === 0 ? 'rgba(76,215,246,0.6)' : i % 3 === 1 ? 'rgba(76,215,246,0.4)' : 'rgba(194,216,248,0.4)',
-                      }}
-                    />
-                  ))}
-                </div>
-                <span className="absolute bottom-2 right-3 font-label text-[8px] text-vs-on-surface-variant uppercase tracking-widest">Live Neural Stream</span>
-              </div>
-
-              {/* CTA */}
-              <button
-                onClick={onStart}
-                className="vs-btn-primary w-full py-5 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm"
-              >
-                Start Recovery Session
+            <Link href="/login">
+              <button className="bg-[#c3f5ff] text-[#00363d] px-16 py-5 rounded-full font-headline text-base font-bold uppercase tracking-widest hover:shadow-[0_0_40px_rgba(195,245,255,0.4)] transition-all transform hover:-translate-y-1">
+                Get Started
               </button>
-            </div>
+            </Link>
           </div>
-
-        </div>
+        </section>
       </main>
+
+      {/* ── FOOTER ── */}
+      <footer className="w-full border-t border-[#3b494c]/15 bg-[#0e0e0e]">
+        <div className="flex flex-col md:flex-row justify-between items-center px-12 py-8 w-full max-w-screen-2xl mx-auto">
+          <div className="text-[#c3f5ff] font-bold font-headline tracking-widest mb-4 md:mb-0">
+            POSTUREGUARD
+          </div>
+          <div className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/50 mb-4 md:mb-0">
+            © 2026 POSTUREGUARD. PRECISION BIOMETRICS.
+          </div>
+          <div className="flex space-x-8">
+            <Link href="/privacy" className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/40 hover:text-[#c3f5ff] transition-colors">Privacy Protocol</Link>
+            <a className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/40 hover:text-[#c3f5ff] transition-colors" href="#">Neural Terms</a>
+            <a className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/40 hover:text-[#c3f5ff] transition-colors" href="#">System Status</a>
+          </div>
+        </div>
+      </footer>
     </div>
-  )
-}
-
-// ── Screen: COUNTDOWN ─────────────────────────────────────────────────────────
-function CountdownScreen({ onComplete }) {
-  const [count, setCount] = useState(3)
-  const [animKey, setAnimKey] = useState(0)
-
-  useEffect(() => {
-    if (count > 0) {
-      const t = setTimeout(() => {
-        setCount(c => c - 1)
-        setAnimKey(k => k + 1)
-      }, 1000)
-      return () => clearTimeout(t)
-    } else {
-      const t = setTimeout(onComplete, 800)
-      return () => clearTimeout(t)
-    }
-  }, [count, onComplete])
-
-  return (
-    <div className="bg-vs-bg min-h-screen flex flex-col items-center justify-center relative overflow-hidden">
-      <div className="fixed inset-0 synaptic-pulse pointer-events-none" />
-      <div className="fixed inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(76,215,246,0.08) 0%, transparent 60%)' }} />
-
-      <div className="relative z-10 flex flex-col items-center gap-8">
-        <span className="font-label text-[11px] uppercase tracking-[0.25em] text-vs-primary/70">Session Starting</span>
-
-        <div className="relative flex items-center justify-center">
-          {/* Rotating ring */}
-          <svg className="absolute w-64 h-64 animate-spin-slow" viewBox="0 0 200 200">
-            <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(76,215,246,0.1)" strokeWidth="1" />
-            <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(76,215,246,0.4)" strokeWidth="1.5"
-              strokeDasharray="60 500" strokeLinecap="round" />
-          </svg>
-          {/* Countdown number */}
-          <div
-            key={animKey}
-            className="font-headline font-bold text-center timer-glow"
-            style={{
-              fontSize: count === 0 ? '4rem' : '9rem',
-              color: count === 0 ? '#4CD7F6' : '#e1e3e8',
-              animation: 'vs-countdown 0.6s ease-out forwards',
-            }}
-          >
-            {count === 0 ? 'GO!' : count}
-          </div>
-        </div>
-
-        <p className="text-vs-on-surface-variant text-sm font-body">
-          {count === 3 ? 'Get ready...' : count === 2 ? 'Take position...' : count === 1 ? 'Here we go...' : 'Begin!'}
-        </p>
-      </div>
-
-      <style>{`
-        @keyframes vs-countdown {
-          0% { transform: scale(0.4); opacity: 0; }
-          50% { transform: scale(1.15); }
-          100% { transform: scale(1); opacity: 1; }
-        }
-      `}</style>
-    </div>
-  )
-}
-
-// ── Screen: SESSION ────────────────────────────────────────────────────────────
-function SessionScreen({ exercise, exerciseIndex, totalExercises, timeLeft, onPause, onSkipNext, onSkipPrev, user, onSignOut }) {
-  const progress = exerciseIndex / totalExercises
-  const progressPct = Math.round(progress * 100)
-
-  return (
-    <div className="bg-vs-bg min-h-screen flex flex-col">
-      <TopHeader title="PostureGuard" subTitle="Active Session" user={user} onSignOut={onSignOut} />
-
-      <main className="min-h-screen pt-24 pb-32 px-4 md:px-6 flex flex-col items-center justify-center max-w-6xl mx-auto w-full">
-        {/* Exercise Header */}
-        <div className="w-full max-w-4xl mb-10 flex flex-col items-center gap-4">
-          <div className="flex flex-col items-center gap-1">
-            <h1 className="font-headline text-4xl md:text-5xl font-bold tracking-tight text-center text-vs-on-surface">
-              {exercise.name}
-            </h1>
-            <p className="font-label text-[10px] uppercase tracking-[0.2em] text-vs-on-surface-variant">{exercise.subtitle}</p>
-          </div>
-          <div className="w-full max-w-md mt-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">
-                {exerciseIndex + 1} of {totalExercises} Exercises
-              </span>
-              <span className="font-label text-[10px] uppercase tracking-widest text-vs-primary">
-                {progressPct}% Complete
-              </span>
-            </div>
-            <div className="h-1.5 w-full bg-vs-surface-high rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{
-                  width: `${progressPct}%`,
-                  background: 'linear-gradient(90deg, #4CD7F6, #c2d8f8)',
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="relative w-full max-w-5xl grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 items-center">
-          {/* Left: Timer + Target (desktop) */}
-          <div className="hidden md:flex col-span-2 flex-col gap-8 items-center justify-center h-full">
-            <div className="text-center">
-              <p className="font-label text-[10px] uppercase tracking-[0.2em] text-vs-on-surface-variant mb-2">Time Left</p>
-              <p className="font-headline text-4xl font-light tracking-tighter text-vs-on-surface timer-glow">
-                {formatTime(timeLeft)}
-              </p>
-            </div>
-            <div className="h-24 w-px" style={{ background: 'linear-gradient(to bottom, transparent, rgba(76,215,246,0.2), transparent)' }} />
-            <div className="text-center">
-              <p className="font-label text-[10px] uppercase tracking-[0.2em] text-vs-on-surface-variant mb-2">Target</p>
-              <p className="font-headline text-2xl font-medium text-vs-on-surface">{exercise.target}</p>
-            </div>
-          </div>
-
-          {/* Center: Exercise Image */}
-          <div className="col-span-1 md:col-span-8 relative rounded-2xl overflow-hidden synaptic-glow bg-vs-surface-mid border-t border-vs-primary/15" style={{ aspectRatio: '16/9' }}>
-            <img
-              src={exercise.image}
-              alt={exercise.name}
-              className="w-full h-full object-cover opacity-70 transition-opacity duration-700"
-              style={{ objectPosition: 'center top' }}
-            />
-            <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #050505 0%, transparent 60%)' }} />
-            <div className="absolute bottom-4 left-4 flex items-center gap-3 glass-panel px-4 py-2 rounded-full border border-vs-outline-variant/20">
-              <span className="flex h-2 w-2 rounded-full bg-vs-primary animate-pulse" />
-              <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface">Tracking Synaptic Load</span>
-            </div>
-          </div>
-
-          {/* Mobile: Timer row */}
-          <div className="flex md:hidden justify-around w-full py-4 bg-vs-surface-mid/50 rounded-xl">
-            <div className="text-center">
-              <p className="font-label text-[10px] uppercase tracking-[0.2em] text-vs-on-surface-variant mb-1">Time Left</p>
-              <p className="font-headline text-3xl font-bold text-vs-primary timer-glow">{formatTime(timeLeft)}</p>
-            </div>
-            <div className="text-center">
-              <p className="font-label text-[10px] uppercase tracking-[0.2em] text-vs-on-surface-variant mb-1">Target</p>
-              <p className="font-headline text-3xl font-bold text-vs-on-surface">{exercise.target}</p>
-            </div>
-          </div>
-
-          {/* Right: Tips (desktop) */}
-          <div className="hidden md:flex col-span-2 flex-col gap-4">
-            <div className="p-4 rounded-2xl bg-vs-surface-mid border-t border-vs-outline-variant/10">
-              <div className="w-6 h-6 rounded-full bg-vs-tertiary/20 flex items-center justify-center mb-2">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c2d8f8" strokeWidth="2.5">
-                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
-              </div>
-              <p className="font-body text-xs text-vs-on-surface-variant leading-relaxed">{exercise.tip}</p>
-            </div>
-            <div className="p-4 rounded-2xl bg-vs-surface-mid border-t border-vs-outline-variant/10">
-              <div className="w-6 h-6 rounded-full bg-vs-primary/20 flex items-center justify-center mb-2">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4CD7F6" strokeWidth="2">
-                  <circle cx="12" cy="12" r="3" /><path d="M6.3 6.3a8 8 0 0 0 0 11.4M17.7 6.3a8 8 0 0 1 0 11.4" />
-                </svg>
-              </div>
-              <p className="font-body text-xs text-vs-on-surface-variant leading-relaxed">{exercise.sensor}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Control Bar */}
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-sm px-6">
-          <div className="glass-panel p-2 rounded-full flex items-center justify-between synaptic-glow border border-vs-outline-variant/15">
-            <button
-              onClick={onSkipPrev}
-              className="w-12 h-12 flex items-center justify-center text-vs-on-surface-variant hover:text-vs-on-surface transition-colors rounded-full hover:bg-vs-surface-mid"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
-              </svg>
-            </button>
-            <button
-              onClick={onPause}
-              className="flex-1 mx-2 h-14 rounded-full flex items-center justify-center gap-3 font-label text-sm font-bold uppercase tracking-widest text-vs-bg vs-btn-primary"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-              </svg>
-              Pause Session
-            </button>
-            <button
-              onClick={onSkipNext}
-              className="w-12 h-12 flex items-center justify-center text-vs-on-surface-variant hover:text-vs-on-surface transition-colors rounded-full hover:bg-vs-surface-mid"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6 18l8.5-6L6 6v12zm2-8.14 5.3 3.8L8 17.14V9.86zM16 6h2v12h-2z" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </main>
-    </div>
-  )
-}
-
-// ── Screen: PAUSED ────────────────────────────────────────────────────────────
-function PausedScreen({ exercise, nextExercise, pausedSeconds, onResume, user, onSignOut }) {
-  // Circular timer — show 30s rest window
-  const restDuration = 30
-  const circumference = 2 * Math.PI * 90
-  const remaining = Math.max(0, restDuration - pausedSeconds)
-  const strokeOffset = circumference * (remaining / restDuration)
-
-  return (
-    <div className="bg-vs-bg min-h-screen flex flex-col">
-      <TopHeader title="PostureGuard" subTitle="Rest" user={user} onSignOut={onSignOut} />
-      <main className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden pt-20 pb-24 px-6">
-        <div className="absolute inset-0 synaptic-pulse pointer-events-none" />
-        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(76,215,246,0.05) 0%, transparent 60%)' }} />
-
-        <div className="relative z-10 flex flex-col items-center text-center space-y-10 max-w-lg w-full">
-          {/* Phase Label */}
-          <div className="space-y-2">
-            <span className="font-label text-vs-primary tracking-[0.2em] text-[11px] uppercase opacity-80">Rest Phase</span>
-            <h1 className="font-headline text-4xl md:text-5xl font-bold tracking-tight text-vs-on-surface">
-              Take a breath.
-            </h1>
-          </div>
-
-          {/* Circular Timer */}
-          <div className="relative flex items-center justify-center">
-            <svg className="w-64 h-64 md:w-72 md:h-72" viewBox="0 0 200 200">
-              {/* Background ring */}
-              <circle cx="100" cy="100" r="90" fill="transparent"
-                stroke="rgba(255,255,255,0.05)" strokeWidth="2" />
-              {/* Progress ring */}
-              <circle
-                cx="100" cy="100" r="90" fill="transparent"
-                stroke="rgba(76,215,246,0.5)" strokeWidth="3"
-                strokeDasharray={`${circumference}`}
-                strokeDashoffset={circumference - strokeOffset}
-                strokeLinecap="round"
-                style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%', transition: 'stroke-dashoffset 1s linear' }}
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="font-headline text-7xl md:text-8xl font-light tracking-tighter text-vs-on-surface timer-glow">
-                {formatTime(pausedSeconds)}
-              </span>
-            </div>
-          </div>
-
-          {/* Next Exercise Card */}
-          {nextExercise && (
-            <div className="w-full max-w-sm bg-vs-surface-mid rounded-2xl p-5 border border-vs-outline-variant/15 shadow-2xl">
-              <div className="flex items-center gap-4 text-left">
-                <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-vs-surface-high flex-shrink-0">
-                  <img src={nextExercise.image} alt={nextExercise.name} className="w-full h-full object-cover opacity-80" />
-                  <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(21,27,35,0.7), transparent)' }} />
-                </div>
-                <div className="flex-1">
-                  <span className="font-label text-vs-tertiary text-[10px] tracking-widest uppercase">Up Next</span>
-                  <h3 className="font-headline text-lg font-semibold text-vs-on-surface mt-0.5">{nextExercise.name}</h3>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8a939e" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-                    </svg>
-                    <span className="font-body text-xs text-vs-on-surface-variant">{formatTime(nextExercise.duration)} duration</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Resume Button */}
-          <button
-            onClick={onResume}
-            className="vs-btn-primary w-full max-w-sm py-5 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm"
-          >
-            Resume Session
-          </button>
-
-          <p className="text-vs-on-surface-variant text-xs font-label uppercase tracking-widest opacity-60">
-            Your progress is saved
-          </p>
-        </div>
-
-        {/* Ambient tip */}
-        <div className="fixed bottom-8 right-6 hidden lg:block">
-          <div className="glass-panel px-4 py-3 rounded-full border border-vs-outline-variant/15 flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-vs-tertiary animate-pulse" />
-            <span className="font-label text-xs tracking-wide text-vs-on-surface-variant">Focus on your lower back during the next set</span>
-          </div>
-        </div>
-      </main>
-    </div>
-  )
-}
-
-// ── Screen: COMPLETE ───────────────────────────────────────────────────────────
-function CompleteScreen({ sessionData, onReturn, userName, user, onSignOut }) {
-  const [phase, setPhase] = useState(0)
-  // phase 0: quote only
-  // phase 1: quote fades + session breakdown appears
-
-  useEffect(() => {
-    const t = setTimeout(() => setPhase(1), 2200)
-    return () => clearTimeout(t)
-  }, [])
-
-  return (
-    <div className="relative min-h-screen bg-vs-bg flex flex-col items-center justify-center py-20 overflow-hidden">
-      <div className="fixed inset-0 neural-glow pointer-events-none" />
-      <div className="fixed inset-0 dot-grid pointer-events-none" />
-
-      {/* Spine tracks */}
-      <div className="fixed left-1/2 -translate-x-1/2 top-0 flex flex-col items-center opacity-20 pointer-events-none">
-        <div className="spine-track" />
-        <div className="w-2 h-2 rounded-full mt-2" style={{ background: '#c2d8f8', filter: 'blur(2px)' }} />
-      </div>
-      <div className="fixed left-1/2 -translate-x-1/2 bottom-0 flex flex-col items-center opacity-20 pointer-events-none">
-        <div className="w-2 h-2 rounded-full mb-2" style={{ background: '#4CD7F6', filter: 'blur(2px)' }} />
-        <div className="spine-track" />
-      </div>
-
-      <main className="relative z-10 max-w-3xl px-6 text-center w-full" style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        {/* Quote Phase - initial fade-in quote only */}
-        <div
-          style={{
-            opacity: phase === 0 ? 1 : 0,
-            transform: phase === 0 ? 'translateY(0)' : 'translateY(-30px)',
-            transition: 'opacity 0.7s ease, transform 0.7s ease',
-            position: 'absolute',
-            left: '50%',
-            transform: phase === 0 ? 'translateX(-50%) translateY(0)' : 'translateX(-50%) translateY(-30px)',
-            width: '100%',
-            pointerEvents: phase === 0 ? 'auto' : 'none',
-          }}
-        >
-          <div className="flex flex-col items-center text-center">
-            <div className="mb-8 inline-flex items-center gap-3 px-4 py-2 rounded-full border border-vs-outline-variant/15 bg-vs-surface-mid/30">
-              <div className="w-2 h-2 rounded-full bg-vs-tertiary animate-pulse" />
-              <span className="font-label text-[10px] uppercase tracking-[0.2em] text-vs-on-surface-variant">Neural alignment verified</span>
-            </div>
-            <h1 className="font-headline text-5xl md:text-7xl font-light text-vs-on-surface tracking-tight leading-tight">
-              Today was a <span className="vs-gradient-text italic">gift</span> for your spine.
-            </h1>
-          </div>
-        </div>
-
-        {/* Breakdown Phase */}
-        <div
-          style={{
-            opacity: phase >= 1 ? 1 : 0,
-            transform: phase >= 1 ? 'translateY(0)' : 'translateY(30px)',
-            transition: 'opacity 0.9s ease, transform 0.9s ease',
-          }}
-        >
-          <div className="mb-6 inline-flex items-center gap-3 px-4 py-2 rounded-full border border-vs-outline-variant/15 bg-vs-surface-mid/30">
-            <div className="w-2 h-2 rounded-full bg-vs-tertiary animate-pulse" />
-            <span className="font-label text-[10px] uppercase tracking-[0.2em] text-vs-on-surface-variant">Neural alignment verified</span>
-          </div>
-
-          <h1 className="font-headline text-5xl md:text-7xl font-light text-vs-on-surface tracking-tight leading-tight mb-6">
-            Today was a <span className="vs-gradient-text italic">gift</span> for your spine.
-          </h1>
-
-          <p className="font-body text-lg text-vs-on-surface-variant/80 max-w-md mx-auto leading-relaxed mb-10">
-            Your body is your temple. We&apos;d love to <span className="text-vs-tertiary font-medium">meet you in the next session.</span>
-          </p>
-
-          {/* Session Stats */}
-          <div className="glass-card max-w-md mx-auto rounded-2xl p-8 mb-8 text-left">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-headline text-lg font-medium text-vs-on-surface tracking-tight">Session Breakdown</h2>
-              <div className="w-2 h-2 rounded-full bg-vs-primary animate-pulse" />
-            </div>
-            <div className="grid grid-cols-3 gap-4 mb-6">
-              <div>
-                <p className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant mb-1">Active Time</p>
-                <p className="font-headline text-2xl text-vs-primary">{sessionData?.activeTime || '15'}<span className="text-sm ml-0.5">m</span></p>
-              </div>
-              <div>
-                <p className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant mb-1">Exercises</p>
-                <p className="font-headline text-2xl text-vs-tertiary">{sessionData?.exerciseCount || EXERCISES.length}<span className="text-sm ml-0.5">done</span></p>
-              </div>
-              <div>
-                <p className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant mb-1">Neural Load</p>
-                <p className="font-headline text-2xl text-vs-on-surface">Low</p>
-              </div>
-            </div>
-
-            {/* Exercises done list */}
-            <div className="border-t border-vs-outline-variant/10 pt-5 space-y-3">
-              {EXERCISES.map((ex, i) => (
-                <div key={ex.id} className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: 'rgba(76,215,246,0.15)' }}>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4CD7F6" strokeWidth="3">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  </div>
-                  <span className="font-body text-sm text-vs-on-surface-variant">{ex.name}</span>
-                  <span className="ml-auto font-mono text-xs text-vs-on-surface-variant/50">{formatTime(ex.duration)}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="border-t border-vs-outline-variant/10 pt-5 mt-4">
-              <button
-                onClick={onReturn}
-                className="w-full font-body text-sm text-vs-primary hover:text-vs-on-surface transition-colors uppercase tracking-widest"
-              >
-                Return to Home
-              </button>
-            </div>
-          </div>
-
-          <p className="font-label text-[10px] uppercase tracking-[0.2em] text-vs-on-surface-variant/40">
-            See you in the next session, {userName || 'there'}.
-          </p>
-        </div>
-      </main>
-    </div>
-  )
-}
-
-// ── Main App ──────────────────────────────────────────────────────────────────
-export default function App() {
-  const [screen, setScreen] = useState('intro')
-  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
-  const [timeLeft, setTimeLeft] = useState(EXERCISES[0].duration)
-  const [pausedSeconds, setPausedSeconds] = useState(0)
-  const [sessionStartTime] = useState(Date.now())
-
-  // ── Auth State ──
-  const [user, setUser] = useState(null)
-  const [sessionReport, setSessionReport] = useState(null)
-  const [sessionError, setSessionError] = useState(null)
-  const [pendingSessionId, setPendingSessionId] = useState(null)
-  const supabaseRef = useRef(null)
-
-  // Initialize Supabase + check auth
-  useEffect(() => {
-    const supabase = createBrowserClient()
-    supabaseRef.current = supabase
-
-    supabase.auth.getUser().then(({ data: { user: u } }) => {
-      setUser(u)
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null)
-    })
-
-    // Capture session ID from URL
-    const params = new URLSearchParams(window.location.search)
-    const sessionId = params.get('id')
-    if (sessionId) {
-      setPendingSessionId(sessionId)
-    }
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  // Load session data AFTER user is authenticated
-  useEffect(() => {
-    if (!user || !pendingSessionId) return
-    if (sessionReport) return // Already loaded
-
-    const loadSession = async () => {
-      try {
-        const supabase = supabaseRef.current
-        const { data: { session: authSession } } = await supabase.auth.getSession()
-
-        const response = await fetch(`/api/sessions/${pendingSessionId}`, {
-          headers: authSession ? { 'Authorization': `Bearer ${authSession.access_token}` } : {}
-        })
-        const data = await response.json()
-
-        if (response.ok && data.session) {
-          setSessionReport(data.session)
-          setSessionError(null)
-        } else if (data.ownerMismatch) {
-          setSessionError('This session belongs to a different account. Please sign in with the account you used in the extension.')
-        } else if (data.requiresAuth) {
-          setSessionError('Please sign in to view this session.')
-        } else {
-          setSessionError('Session not found.')
-        }
-      } catch (err) {
-        console.warn('Failed to load session:', err)
-        setSessionError('Failed to load session data.')
-      }
-    }
-
-    loadSession()
-  }, [user, pendingSessionId, sessionReport])
-
-  const handleSignIn = useCallback(() => {
-    const supabase = supabaseRef.current
-    if (!supabase) return
-    supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin + '/auth/callback' }
-    })
-  }, [])
-
-  const handleSignOut = useCallback(async () => {
-    const supabase = supabaseRef.current
-    if (!supabase) return
-    await supabase.auth.signOut()
-    setUser(null)
-  }, [])
-
-  const userName = user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || null
-
-  const currentExercise = EXERCISES[currentExerciseIndex]
-  const nextExercise = EXERCISES[currentExerciseIndex + 1] || null
-
-  // ── Session Timer (counts down during 'session') ──
-  useEffect(() => {
-    if (screen !== 'session') return
-
-    const interval = setInterval(() => {
-      setTimeLeft(prev => Math.max(0, prev - 1))
-    }, 1000)
-
-    return () => clearInterval(interval)
-  }, [screen, currentExerciseIndex])
-
-  // ── Advance exercise when timer hits 0 ──
-  useEffect(() => {
-    if (screen !== 'session' || timeLeft > 0) return
-
-    if (currentExerciseIndex < EXERCISES.length - 1) {
-      const nextIdx = currentExerciseIndex + 1
-      setCurrentExerciseIndex(nextIdx)
-      setTimeLeft(EXERCISES[nextIdx].duration)
-    } else {
-      setScreen('complete')
-    }
-  }, [timeLeft, screen, currentExerciseIndex])
-
-  // ── Pause Timer (counts up during 'paused') ──
-  useEffect(() => {
-    if (screen !== 'paused') return
-
-    const interval = setInterval(() => {
-      setPausedSeconds(prev => prev + 1)
-    }, 1000)
-
-    return () => clearInterval(interval)
-  }, [screen])
-
-  // ── Handlers ──
-  const handleStart = useCallback(() => {
-    setScreen('countdown')
-  }, [])
-
-  const handleCountdownComplete = useCallback(() => {
-    setCurrentExerciseIndex(0)
-    setTimeLeft(EXERCISES[0].duration)
-    setScreen('session')
-  }, [])
-
-  const handlePause = useCallback(() => {
-    setPausedSeconds(0)
-    setScreen('paused')
-  }, [])
-
-  const handleResume = useCallback(() => {
-    setScreen('session')
-  }, [])
-
-  const handleSkipNext = useCallback(() => {
-    if (currentExerciseIndex < EXERCISES.length - 1) {
-      const nextIdx = currentExerciseIndex + 1
-      setCurrentExerciseIndex(nextIdx)
-      setTimeLeft(EXERCISES[nextIdx].duration)
-    } else {
-      setScreen('complete')
-    }
-  }, [currentExerciseIndex])
-
-  const handleSkipPrev = useCallback(() => {
-    if (currentExerciseIndex > 0) {
-      const prevIdx = currentExerciseIndex - 1
-      setCurrentExerciseIndex(prevIdx)
-      setTimeLeft(EXERCISES[prevIdx].duration)
-    }
-  }, [currentExerciseIndex])
-
-  const handleReturn = useCallback(() => {
-    setScreen('intro')
-    setCurrentExerciseIndex(0)
-    setTimeLeft(EXERCISES[0].duration)
-    setPausedSeconds(0)
-  }, [])
-
-  const sessionData = {
-    activeTime: Math.round((Date.now() - sessionStartTime) / 60000),
-    exerciseCount: EXERCISES.length,
-  }
-
-  // ── Render ──
-
-  // Show landing page if not authenticated
-  if (!user) {
-    return <LandingScreen />
-  }
-
-  // Show loading while verifying session ownership
-  if (pendingSessionId && !sessionReport && !sessionError) {
-    return (
-      <div className="bg-vs-bg min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-vs-primary border-t-transparent animate-spin" />
-          <p className="text-sm text-vs-on-surface-variant">Loading your session...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Show error if session belongs to a different account
-  if (sessionError) {
-    return (
-      <div className="bg-vs-bg min-h-screen flex flex-col">
-        <TopHeader user={user} onSignOut={handleSignOut} />
-        <div className="fixed inset-0 dot-grid pointer-events-none" />
-        <main className="flex-1 flex items-center justify-center px-6 pt-20">
-          <div className="glass-card rounded-2xl p-8 max-w-md text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/10 flex items-center justify-center">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
-              </svg>
-            </div>
-            <h2 className="font-headline text-xl font-bold text-vs-on-surface mb-2">Access Denied</h2>
-            <p className="text-sm text-vs-on-surface-variant mb-6">{sessionError}</p>
-            <button onClick={handleSignOut} className="vs-btn-primary px-8 py-3 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-xs">
-              Sign in with a different account
-            </button>
-          </div>
-        </main>
-      </div>
-    )
-  }
-
-  return (
-    <>
-      {screen === 'intro' && (
-        <IntroScreen onStart={handleStart} user={user} sessionReport={sessionReport} onSignIn={handleSignIn} onSignOut={handleSignOut} />
-      )}
-      {screen === 'countdown' && (
-        <CountdownScreen onComplete={handleCountdownComplete} />
-      )}
-      {screen === 'session' && (
-        <SessionScreen
-          exercise={currentExercise}
-          exerciseIndex={currentExerciseIndex}
-          totalExercises={EXERCISES.length}
-          timeLeft={timeLeft}
-          onPause={handlePause}
-          onSkipNext={handleSkipNext}
-          onSkipPrev={handleSkipPrev}
-          user={user}
-          onSignOut={handleSignOut}
-        />
-      )}
-      {screen === 'paused' && (
-        <PausedScreen
-          exercise={currentExercise}
-          nextExercise={nextExercise}
-          pausedSeconds={pausedSeconds}
-          onResume={handleResume}
-          user={user}
-          onSignOut={handleSignOut}
-        />
-      )}
-      {screen === 'complete' && (
-        <CompleteScreen
-          sessionData={sessionData}
-          onReturn={handleReturn}
-          userName={userName}
-          user={user}
-          onSignOut={handleSignOut}
-        />
-      )}
-    </>
   )
 }

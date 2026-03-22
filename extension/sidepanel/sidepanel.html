@@ -145,8 +145,18 @@
           <input type="range" id="threshold-slider" min="15" max="120" value="30" step="5">
           <span class="setting-value" id="threshold-value">30s</span>
         </div>
+        <div class="setting-row">
+          <label for="duration-select">Session Duration</label>
+          <select id="duration-select" class="input" style="flex:1;width:auto;margin-bottom:0;">
+            <option value="60000">1 min</option>
+            <option value="300000">5 min</option>
+            <option value="900000">15 min</option>
+            <option value="1800000">30 min</option>
+            <option value="0">Unlimited</option>
+          </select>
+        </div>
         <div class="toggle-row">
-          <label for="debug-toggle">Debug Mode</label>
+          <label for="debug-toggle">Live Mode</label>
           <label class="switch switch-sm">
             <input type="checkbox" id="debug-toggle">
             <span class="slider"></span>

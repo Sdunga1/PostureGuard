@@ -17,17 +17,24 @@ const QR_BRIDGE = {
     // Truncate if too large
     let encoded = btoa(JSON.stringify(payload));
     if (encoded.length > this.MAX_PAYLOAD_BYTES) {
+      const m = payload.metrics || {};
       payload = {
         version: payload.version,
         sessionId: payload.sessionId,
         duration: payload.duration,
         metrics: {
-          avgPostureScore: payload.metrics?.avgPostureScore,
-          avgHeadTilt: payload.metrics?.avgHeadTilt,
-          avgSlouchAngle: payload.metrics?.avgSlouchAngle,
-          avgScreenDistance: payload.metrics?.avgScreenDistance,
-          alertCount: payload.metrics?.alertCount,
-          worstPeriods: (payload.metrics?.worstPeriods || []).slice(0, 3)
+          avgPostureScore: m.avgPostureScore,
+          avgHeadTilt: m.avgHeadTilt,
+          avgSlouchAngle: m.avgSlouchAngle,
+          avgScreenDistance: m.avgScreenDistance,
+          alertCount: m.alertCount,
+          worstPeriods: (m.worstPeriods || []).slice(0, 3),
+          uprightPercent: m.uprightPercent,
+          slouchEventCount: m.slouchEventCount,
+          longestGoodStreak: m.longestGoodStreak,
+          postureTrend: m.postureTrend,
+          avgShoulderAngle: m.avgShoulderAngle,
+          avgShoulderElevation: m.avgShoulderElevation
         },
         claudeAnalysis: payload.claudeAnalysis
       };
