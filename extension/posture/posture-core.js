@@ -61,12 +61,16 @@
 
   async function initCamera() {
     try {
+      console.log('[PostureGuard] Starting camera initialization...');
+
       // Clean up any existing stream/video before creating new ones
       if (stream) {
+        console.log('[PostureGuard] Cleaning up existing stream');
         stream.getTracks().forEach(t => t.stop());
         stream = null;
       }
       if (video && video.parentNode) {
+        console.log('[PostureGuard] Removing existing video element');
         video.parentNode.removeChild(video);
         video = null;
       }
@@ -81,8 +85,10 @@
       video.muted = true;
       video.playsInline = true;
       document.body.appendChild(video);
+      console.log('[PostureGuard] Video element created');
 
       // Request camera with timeout (user has 10 seconds to respond)
+      console.log('[PostureGuard] Requesting camera access...');
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Camera permission request timed out')), 10000)
       );
@@ -98,6 +104,7 @@
         timeoutPromise
       ]);
 
+      console.log('[PostureGuard] Stream acquired, setting video source...');
       video.srcObject = stream;
       await video.play();
       console.log('[PostureGuard] Camera initialized (' + CAMERA_WIDTH + 'x' + CAMERA_HEIGHT + ')');
@@ -105,7 +112,7 @@
     } catch (err) {
       const errName = err.name || 'UnknownError';
       const errMsg = err.message || 'No error message';
-      console.error('[PostureGuard] Camera init failed:', errName, errMsg);
+      console.log('[PostureGuard] CAMERA_ERROR: ' + errName + ' | ' + errMsg);
 
       // Also send error to background for logging
       chrome.runtime.sendMessage({
