@@ -20,7 +20,7 @@ const settings = {
 
 const SCORE_BROADCAST_INTERVAL_MS = 1000;
 const ROLLING_WINDOW_MS = 30000;
-let sessionDurationMs = 5 * 60 * 1000; // Default 5 minutes
+let sessionDurationMs = 1 * 60 * 1000; // Default 1 minute
 
 // Landmark indices (Human.js / MediaPipe Face Mesh)
 // Face mesh landmark indices (Human.js / MediaPipe)
@@ -81,37 +81,19 @@ const FALLBACK_TIPS = [
 
 // ─── Initialization ───────────────────────────────────────────
 
-// Notify all tabs that the background has restarted
-async function notifyContentScriptsOfRestart() {
-  try {
-    const tabs = await chrome.tabs.query({});
-    for (const tab of tabs) {
-      chrome.tabs.sendMessage(tab.id, {
-        type: 'BACKGROUND_RESTARTED',
-        settings: settings,
-        hasCalibration: calibration !== null
-      }).catch(() => {
-        // Tab may not have content script, ignore
-      });
-    }
-    console.log('[PostureGuard] Notified content scripts of restart');
-  } catch (err) {
-    console.warn('[PostureGuard] Failed to notify content scripts:', err.message);
-  }
-}
-
-chrome.runtime.onInstalled.addListener(() => {
-  console.log('[PostureGuard] Extension installed');
-  // Reset monitoring state so toggle starts fresh after reload
-  chrome.storage.local.set({ postureEnabled: false });
+chrome.runtime.onInstalled.addListener(async () => {
+  console.log('[PostureGuard] Extension installed — clearing all data for fresh start');
+  await chrome.storage.local.clear();
+  ownerTabId = null;
+  activeTabId = null;
+  calibration = null;
+  sessionEnding = false;
   loadSettings();
-  loadCalibration();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   loadSettings();
   loadCalibration();
-  notifyContentScriptsOfRestart();
 });
 
 

@@ -42,21 +42,10 @@
         break;
 
       case 'POSTURE_ENABLED_CHANGED':
-        console.log('[PostureGuard] Toggle monitoring:', message.enabled ? 'ON' : 'OFF');
-        // Dispatch toggle event — PostureCore handles start() and stop()
         window.dispatchEvent(new CustomEvent('posture:toggle', {
           detail: { enabled: message.enabled }
         }));
-
-        if (!message.enabled) {
-          // Give camera time to fully release before responding
-          setTimeout(() => {
-            sendResponse({ ok: true });
-          }, 200);
-          return true; // Indicate we'll send response asynchronously
-        } else {
-          sendResponse({ ok: true });
-        }
+        sendResponse({ ok: true });
         break;
 
       case 'POSTURE_SCORE_UPDATE':
@@ -84,23 +73,6 @@
           ok: true,
           phase: window.PostureCore ? window.PostureCore.getPhase() : 'loading'
         });
-        break;
-
-      case 'BACKGROUND_RESTARTED':
-        // Background service worker restarted — reinitialize camera state
-        console.log('[PostureGuard] Background restarted, reinitializing');
-        if (window.PostureCore) {
-          window.PostureCore.resetState?.();
-        }
-        // Re-check ownership with the fresh background
-        chrome.runtime.sendMessage({
-          type: 'SHOULD_START_CAMERA'
-        }).then(response => {
-          if (response && response.start) {
-            window.dispatchEvent(new CustomEvent('posture:start-camera'));
-          }
-        }).catch(() => {});
-        sendResponse({ ok: true });
         break;
 
       default:

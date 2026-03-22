@@ -508,18 +508,7 @@
     const eyeDx = rightEye[0] - leftEye[0];
     const eyeDy = rightEye[1] - leftEye[1];
 
-    // Body keypoint helper
-    const bkp = event.detail.bodyKeypoints;
-    function bodyXY(index) {
-      const kp = bkp && bkp[index];
-      if (!kp || (kp.score || 0) < 0.3) return null;
-      return {
-        x: kp.position ? kp.position[0] : kp.x,
-        y: kp.position ? kp.position[1] : kp.y
-      };
-    }
-
-    const frameData = {
+    collectedFrames.push({
       forwardTilt: nose[1] - eyeMidY,
       lateralTilt: Math.atan2(eyeDy, eyeDx) * (180 / Math.PI),
       faceSize: Math.sqrt(
@@ -529,39 +518,8 @@
       screenDistance: Math.sqrt(
         Math.pow(rightEye[0] - leftEye[0], 2) +
         Math.pow(rightEye[1] - leftEye[1], 2)
-      ),
-      // Body metrics (null if keypoints unavailable)
-      shoulderAngle: null,
-      shoulderElevation: null,
-      trunkLean: null
-    };
-
-    // Shoulder angle
-    const lS = bodyXY(5);
-    const rS = bodyXY(6);
-    if (lS && rS) {
-      frameData.shoulderAngle = Math.atan2(rS.y - lS.y, rS.x - lS.x) * (180 / Math.PI);
-
-      // Shoulder elevation (ear-to-shoulder distance)
-      const lE = bodyXY(3);
-      const rE = bodyXY(4);
-      if (lE && rE) {
-        const leftDist = Math.sqrt(Math.pow(lE.x - lS.x, 2) + Math.pow(lE.y - lS.y, 2));
-        const rightDist = Math.sqrt(Math.pow(rE.x - rS.x, 2) + Math.pow(rE.y - rS.y, 2));
-        frameData.shoulderElevation = (leftDist + rightDist) / 2;
-      }
-
-      // Trunk lean
-      const lH = bodyXY(11);
-      const rH = bodyXY(12);
-      if (lH && rH) {
-        const shoulderMidX = (lS.x + rS.x) / 2;
-        const hipMidX = (lH.x + rH.x) / 2;
-        frameData.trunkLean = shoulderMidX - hipMidX;
-      }
-    }
-
-    collectedFrames.push(frameData);
+      )
+    });
 
     const progress = collectedFrames.length / CALIBRATION_FRAMES;
     updateProgress(progress);
@@ -606,24 +564,6 @@
     avg.screenDistance /= n;
     avg.ts = Date.now();
     avg.version = 1;
-
-    // Body metric baselines (additive — null if body not visible during calibration)
-    const bodyFrames = collectedFrames.filter(f => f.shoulderAngle !== null);
-    if (bodyFrames.length > 0) {
-      avg.shoulderAngle = bodyFrames.reduce((s, f) => s + f.shoulderAngle, 0) / bodyFrames.length;
-      const elevFrames = bodyFrames.filter(f => f.shoulderElevation !== null);
-      avg.shoulderElevation = elevFrames.length > 0
-        ? elevFrames.reduce((s, f) => s + f.shoulderElevation, 0) / elevFrames.length
-        : null;
-      const leanFrames = bodyFrames.filter(f => f.trunkLean !== null);
-      avg.trunkLean = leanFrames.length > 0
-        ? leanFrames.reduce((s, f) => s + f.trunkLean, 0) / leanFrames.length
-        : null;
-    } else {
-      avg.shoulderAngle = null;
-      avg.shoulderElevation = null;
-      avg.trunkLean = null;
-    }
 
     // Save to storage
     chrome.storage.local.set({ postureCalV1: avg });

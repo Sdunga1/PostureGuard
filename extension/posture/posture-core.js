@@ -59,80 +59,54 @@
 
   // ─── Camera Setup ─────────────────────────────────────────────
 
-  async function initCamera() {
-    try {
-      console.log('[PostureGuard] Starting camera initialization...');
+  async function initCamera(retries) {
+    const maxRetries = retries || 2;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Clean up any leftover video element
+        if (video && video.parentNode) {
+          video.parentNode.removeChild(video);
+        }
 
-      // Clean up any existing stream/video before creating new ones
-      if (stream) {
-        console.log('[PostureGuard] Cleaning up existing stream');
-        stream.getTracks().forEach(t => t.stop());
-        stream = null;
-      }
-      if (video && video.parentNode) {
-        console.log('[PostureGuard] Removing existing video element');
-        video.parentNode.removeChild(video);
-        video = null;
-      }
+        video = document.createElement('video');
+        video.style.position = 'fixed';
+        video.style.top = '-10000px';
+        video.style.left = '-10000px';
+        video.style.width = '1px';
+        video.style.height = '1px';
+        video.autoplay = true;
+        video.muted = true;
+        video.playsInline = true;
+        document.body.appendChild(video);
 
-      video = document.createElement('video');
-      video.style.position = 'fixed';
-      video.style.top = '-10000px';
-      video.style.left = '-10000px';
-      video.style.width = '1px';
-      video.style.height = '1px';
-      video.autoplay = true;
-      video.muted = true;
-      video.playsInline = true;
-      document.body.appendChild(video);
-      console.log('[PostureGuard] Video element created');
-
-      // Request camera with timeout (user has 10 seconds to respond)
-      console.log('[PostureGuard] Requesting camera access...');
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Camera permission request timed out')), 10000)
-      );
-
-      stream = await Promise.race([
-        navigator.mediaDevices.getUserMedia({
+        stream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: CAMERA_WIDTH,
             height: CAMERA_HEIGHT,
             facingMode: 'user'
           }
-        }),
-        timeoutPromise
-      ]);
+        });
 
-      console.log('[PostureGuard] Stream acquired, setting video source...');
-      video.srcObject = stream;
-      await video.play();
-      console.log('[PostureGuard] Camera initialized (' + CAMERA_WIDTH + 'x' + CAMERA_HEIGHT + ')');
-      return true;
-    } catch (err) {
-      const errName = err.name || 'UnknownError';
-      const errMsg = err.message || 'No error message';
-      console.log('[PostureGuard] CAMERA_ERROR: ' + errName + ' | ' + errMsg);
+        video.srcObject = stream;
+        await video.play();
+        console.log('[PostureGuard] Camera initialized (' + CAMERA_WIDTH + 'x' + CAMERA_HEIGHT + ')');
+        return true;
+      } catch (err) {
+        console.warn('[PostureGuard] Camera attempt ' + attempt + '/' + maxRetries + ' failed:', err.name, '-', err.message);
+        // Clean up failed attempt
+        if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+        if (video && video.parentNode) { video.parentNode.removeChild(video); video = null; }
 
-      // Also send error to background for logging
-      chrome.runtime.sendMessage({
-        type: 'POSTURE_STATUS_UPDATE',
-        phase: 'camera-error',
-        note: 'Camera init failed: ' + errName + ' - ' + errMsg
-      }).catch(() => {});
-
-      // Clean up on failure
-      if (stream) {
-        stream.getTracks().forEach(t => t.stop());
-        stream = null;
+        if (attempt < maxRetries) {
+          // Wait before retrying — camera hardware may still be releasing
+          await new Promise(r => setTimeout(r, 1000));
+        } else {
+          dispatchStatus('error', 'Camera error: ' + (err.name || 'unknown'));
+          return false;
+        }
       }
-      if (video && video.parentNode) {
-        video.parentNode.removeChild(video);
-        video = null;
-      }
-      dispatchStatus('error', 'Camera access denied: ' + errName);
-      return false;
     }
+    return false;
   }
 
   // ─── Human.js Setup ───────────────────────────────────────────
@@ -244,21 +218,10 @@
     dispatchStatus('loading', 'Initializing camera and detection model...');
 
     const cameraOk = await initCamera();
-    if (!cameraOk) {
-      console.warn('[PostureGuard] Camera initialization failed');
-      // Notify background that we couldn't start
-      chrome.runtime.sendMessage({ type: 'CAMERA_RELEASED' }).catch(() => {});
-      return;
-    }
+    if (!cameraOk) return;
 
     const humanOk = await initHuman();
-    if (!humanOk) {
-      console.warn('[PostureGuard] Human.js initialization failed');
-      // Clean up camera if human init fails
-      stop();
-      chrome.runtime.sendMessage({ type: 'CAMERA_RELEASED' }).catch(() => {});
-      return;
-    }
+    if (!humanOk) return;
 
     enabled = true;
     frameCount = 0;
@@ -344,15 +307,16 @@
 
   window.addEventListener('posture:toggle', async (e) => {
     if (e.detail.enabled) {
+      // Wait for camera hardware to fully release if we just stopped
+      await new Promise(r => setTimeout(r, 500));
       // Check with background if we should own the camera
       try {
         const response = await chrome.runtime.sendMessage({ type: 'SHOULD_START_CAMERA' });
         if (response && response.start) {
-          // Small delay to ensure state is fully reset before starting
-          setTimeout(() => start(), 100);
+          start();
         }
       } catch (_e) {
-        setTimeout(() => start(), 100);
+        start();
       }
     } else {
       stop();
@@ -365,8 +329,23 @@
     togglePreview();
   });
 
-  // Camera only starts when user explicitly toggles "Enable Monitoring" from the sidepanel.
-  // No auto-start — avoids race conditions on extension reload.
+  // Check if this tab should start the camera
+  // Only one tab runs the camera — ask background first
+  chrome.storage.local.get(['postureEnabled'], async (result) => {
+    if (result.postureEnabled) {
+      try {
+        const response = await chrome.runtime.sendMessage({ type: 'SHOULD_START_CAMERA' });
+        if (response && response.start) {
+          start();
+        } else {
+          console.log('[PostureGuard] Camera already running on another tab');
+        }
+      } catch (_e) {
+        // Background not ready, try starting anyway
+        start();
+      }
+    }
+  });
 
   // Expose for other modules
   window.PostureCore = {

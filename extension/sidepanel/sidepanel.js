@@ -216,7 +216,7 @@
       els.thresholdValue.textContent = els.thresholdSlider.value + 's';
     }
     if (els.durationSelect) {
-      const durationVal = (stored.sessionDurationMs !== null && stored.sessionDurationMs !== undefined) ? stored.sessionDurationMs : 300000;
+      const durationVal = (stored.sessionDurationMs !== null && stored.sessionDurationMs !== undefined) ? stored.sessionDurationMs : 60000;
       els.durationSelect.value = durationVal;
     }
     if (els.debugToggle) {
@@ -269,7 +269,38 @@
       }
       return await chrome.tabs.sendMessage(tab.id, message);
     } catch (_err) {
-      // Content script not injected on this tab — silently ignore
+      // Content script is stale (extension was reloaded).
+      // Auto-reload the tab to get a fresh content script, then retry.
+      if (!silent) {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab && tab.id) {
+          if (els.statusText) {
+            els.statusText.textContent = 'Reconnecting...';
+          }
+          await chrome.tabs.reload(tab.id);
+          // Wait for tab to finish loading
+          await new Promise(resolve => {
+            const listener = (tabId, info) => {
+              if (tabId === tab.id && info.status === 'complete') {
+                chrome.tabs.onUpdated.removeListener(listener);
+                resolve();
+              }
+            };
+            chrome.tabs.onUpdated.addListener(listener);
+            // Safety timeout
+            setTimeout(() => {
+              chrome.tabs.onUpdated.removeListener(listener);
+              resolve();
+            }, 5000);
+          });
+          // Retry the message with the fresh content script
+          try {
+            return await chrome.tabs.sendMessage(tab.id, message);
+          } catch (_retryErr) {
+            return null;
+          }
+        }
+      }
       return null;
     }
   }
