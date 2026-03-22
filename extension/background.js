@@ -81,6 +81,25 @@ const FALLBACK_TIPS = [
 
 // ─── Initialization ───────────────────────────────────────────
 
+// Notify all tabs that the background has restarted
+async function notifyContentScriptsOfRestart() {
+  try {
+    const tabs = await chrome.tabs.query({});
+    for (const tab of tabs) {
+      chrome.tabs.sendMessage(tab.id, {
+        type: 'BACKGROUND_RESTARTED',
+        settings: settings,
+        hasCalibration: calibration !== null
+      }).catch(() => {
+        // Tab may not have content script, ignore
+      });
+    }
+    console.log('[PostureGuard] Notified content scripts of restart');
+  } catch (err) {
+    console.warn('[PostureGuard] Failed to notify content scripts:', err.message);
+  }
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log('[PostureGuard] Extension installed');
   loadSettings();
@@ -90,7 +109,19 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onStartup.addListener(() => {
   loadSettings();
   loadCalibration();
+  notifyContentScriptsOfRestart();
 });
+
+// Also notify on first message (in case background was idle-restarted)
+let firstMessage = true;
+function ensureInitialized() {
+  if (firstMessage) {
+    firstMessage = false;
+    loadSettings();
+    loadCalibration();
+    // Don't notify here — too early, settings might not be loaded yet
+  }
+}
 
 // Open side panel on extension icon click
 chrome.action.onClicked.addListener((tab) => {
@@ -257,6 +288,7 @@ function calculateBodyMetrics(bodyKeypoints, ts) {
 }
 
 let scoreLogCounter = 0;
+const backgroundInitialized = false;
 
 function computeScore(metrics, bodyMetrics) {
   if (!calibration) return null; // No score without calibration

@@ -75,6 +75,23 @@
         });
         break;
 
+      case 'BACKGROUND_RESTARTED':
+        // Background service worker restarted — reinitialize camera state
+        console.log('[PostureGuard] Background restarted, reinitializing');
+        if (window.PostureCore) {
+          window.PostureCore.resetState?.();
+        }
+        // Re-check ownership with the fresh background
+        chrome.runtime.sendMessage({
+          type: 'SHOULD_START_CAMERA'
+        }).then(response => {
+          if (response && response.start) {
+            window.dispatchEvent(new CustomEvent('posture:start-camera'));
+          }
+        }).catch(() => {});
+        sendResponse({ ok: true });
+        break;
+
       default:
         break;
     }
