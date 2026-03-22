@@ -809,7 +809,7 @@ function PausedScreen({ exercise, nextExercise, pausedSeconds, onResume, user, o
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="font-headline text-7xl md:text-8xl font-light tracking-tighter text-vs-on-surface timer-glow">
-                {formatTime(pausedSeconds)}
+                {remaining}
               </span>
             </div>
           </div>
@@ -819,7 +819,17 @@ function PausedScreen({ exercise, nextExercise, pausedSeconds, onResume, user, o
             <div className="w-full max-w-sm bg-vs-surface-mid rounded-2xl p-5 border border-vs-outline-variant/15 shadow-2xl">
               <div className="flex items-center gap-4 text-left">
                 <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-vs-surface-high flex-shrink-0">
-                  <img src={nextExercise.image} alt={nextExercise.name} className="w-full h-full object-cover opacity-80" />
+                  {nextExercise.image.endsWith('.mp4') ? (
+                    <video
+                      src={nextExercise.image}
+                      className="w-full h-full object-cover opacity-80"
+                      muted
+                      playsInline
+                      preload="metadata"
+                    />
+                  ) : (
+                    <img src={nextExercise.image} alt={nextExercise.name} className="w-full h-full object-cover opacity-80" />
+                  )}
                   <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(21,27,35,0.7), transparent)' }} />
                 </div>
                 <div className="flex-1">
