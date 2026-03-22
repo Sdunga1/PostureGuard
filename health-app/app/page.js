@@ -2,6 +2,9 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase'
+import Image from 'next/image'
+import StatsScroll from '@/components/StatsScroll'
+import BlogCards from '@/components/BlogCards'
 
 // ── PostureGuard Landing Page ─────────────────────────────────────────────────
 export default async function LandingPage() {
@@ -214,22 +217,13 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        {/* ── STATS STRIP ── */}
+        {/* ── STATS ── */}
         <section id="stats" className="max-w-screen-2xl mx-auto px-8 md:px-16 py-16 border-y border-white/5 bg-[#0e0e0e]/30">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
-            <div>
-              <h4 className="font-headline text-4xl font-bold text-[#c3f5ff] mb-2">65%</h4>
-              <p className="font-headline text-[10px] uppercase tracking-[0.2em] text-[#bac9cc]">of desk workers develop back pain</p>
-            </div>
-            <div>
-              <h4 className="font-headline text-4xl font-bold text-[#66d9cc] mb-2">9+ Hours</h4>
-              <p className="font-headline text-[10px] uppercase tracking-[0.2em] text-[#bac9cc]">average daily sitting</p>
-            </div>
-            <div>
-              <h4 className="font-headline text-4xl font-bold text-[#c3f5ff] mb-2">$86B</h4>
-              <p className="font-headline text-[10px] uppercase tracking-[0.2em] text-[#bac9cc]">spent annually on back pain in the US</p>
-            </div>
+          <div className="text-center mb-8">
+            <h2 className="font-headline text-sm uppercase tracking-[0.4em] text-[#c3f5ff]/60 font-bold mb-4">The Problem</h2>
+            <div className="w-12 h-px bg-[#c3f5ff]/30 mx-auto" />
           </div>
+          <StatsScroll />
         </section>
 
         {/* ── THE WORKFLOW ── */}
@@ -329,22 +323,10 @@ export default async function LandingPage() {
         <section id="blogs" className="max-w-screen-2xl mx-auto px-8 md:px-16 pb-32">
           <div className="text-center mb-16">
             <h2 className="font-headline text-xs uppercase tracking-[0.4em] text-[#c3f5ff]/60 font-bold mb-4">From the Blog</h2>
-            <div className="w-12 h-px bg-[#c3f5ff]/30 mx-auto" />
+            <p className="font-body text-[#bac9cc]/60 text-sm mt-4 max-w-lg mx-auto">Insights on posture science, AI-driven health, and building better work habits.</p>
+            <div className="w-12 h-px bg-[#c3f5ff]/30 mx-auto mt-4" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <Link href="/blog/1" className="group relative bg-[#1c1b1b] p-8 border border-white/5 transition-all hover:border-[#c3f5ff]/30 hover:bg-[#2a2a2a] cursor-pointer block">
-              <div className="font-headline text-[10px] uppercase tracking-[0.2em] text-[#c3f5ff]/50 mb-4">March 2026 · 4 min read</div>
-              <h3 className="font-headline text-xl font-bold text-[#e5e2e1] mb-3 uppercase tracking-tight group-hover:text-[#c3f5ff] transition-colors">Why Your Posture Gets Worse After Lunch</h3>
-              <p className="font-body text-[#bac9cc] text-sm font-light leading-relaxed">Most people notice it around 2pm. The slouch creeps in, the neck drifts forward, and the shoulders round.</p>
-              <div className="mt-6 font-headline text-[10px] uppercase tracking-widest text-[#c3f5ff] opacity-0 group-hover:opacity-100 transition-opacity">Read Article →</div>
-            </Link>
-            <Link href="/blog/2" className="group relative bg-[#1c1b1b] p-8 border border-white/5 transition-all hover:border-[#c3f5ff]/30 hover:bg-[#2a2a2a] cursor-pointer block">
-              <div className="font-headline text-[10px] uppercase tracking-[0.2em] text-[#c3f5ff]/50 mb-4">March 2026 · 6 min read</div>
-              <h3 className="font-headline text-xl font-bold text-[#e5e2e1] mb-3 uppercase tracking-tight group-hover:text-[#c3f5ff] transition-colors">The Science Behind Posture Scoring</h3>
-              <p className="font-body text-[#bac9cc] text-sm font-light leading-relaxed">Generic posture standards don&apos;t account for individual variation. PostureGuard takes a different approach.</p>
-              <div className="mt-6 font-headline text-[10px] uppercase tracking-widest text-[#c3f5ff] opacity-0 group-hover:opacity-100 transition-opacity">Read Article →</div>
-            </Link>
-          </div>
+          <BlogCards />
         </section>
 
         {/* ── FINAL CTA ── */}
