@@ -346,15 +346,11 @@ function LandingScreen() {
 // Phase 2 → quote fades out, report card appears (clean – no name/quote above)
 function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn, onSignOut }) {
   // Decide once at mount whether to skip — never recalculate on re-renders
-  // Animation plays when: came from extension (?id= in URL), not shown today, workout not done
+  // Animation plays when: came from extension (?id= in URL)
   const [skipAnim] = useState(() => {
-    if (workoutCompleted) return true
     if (typeof window === 'undefined') return true
     const hasId = new URLSearchParams(window.location.search).has('id')
     if (!hasId) return true // navigating within app — skip
-    const key = `pg_intro_shown_${new Date().toDateString()}`
-    if (sessionStorage.getItem(key)) return true // already played today
-    sessionStorage.setItem(key, '1') // mark as played
     return false
   })
   const cameFromInsights = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('from') === 'insights'
@@ -1122,7 +1118,7 @@ export default function App() {
     const supabase = supabaseRef.current
     if (!supabase) return
     await supabase.auth.signOut()
-    setUser(null)
+    window.location.href = '/'
   }, [])
 
   const userName = user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || null
