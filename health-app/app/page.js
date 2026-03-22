@@ -12,7 +12,7 @@ const EXERCISE_POOL = [
     duration: 105,
     target: '12 Reps',
     tip: 'Keep your eyes level and tuck your chin toward your throat.',
-    sensor: 'C-Spine sensor at 94% accuracy.',
+    sensor: 'Targets: Deep cervical flexors, upper trapezius.',
     image: '/exercises/chin-tucks.webp',
     issues: ['forward_head', 'slouch'],
   },
@@ -23,7 +23,7 @@ const EXERCISE_POOL = [
     duration: 120,
     target: '15 Reps',
     tip: 'Roll shoulders backward in a slow, full circular motion.',
-    sensor: 'Shoulder sensor at 92% accuracy.',
+    sensor: 'Targets: Deltoids, rotator cuff, upper trapezius.',
     image: '/exercises/shoulder-rolls.webp',
     issues: ['shoulder_asymmetry', 'slouch'],
   },
@@ -34,7 +34,7 @@ const EXERCISE_POOL = [
     duration: 90,
     target: '10 Reps',
     tip: 'Gently tilt head side to side, hold each position for 3 seconds.',
-    sensor: 'Neck sensor at 91% accuracy.',
+    sensor: 'Targets: Sternocleidomastoid, levator scapulae.',
     image: '/exercises/neck-stretches.webp',
     issues: ['lateral_tilt', 'forward_head'],
   },
@@ -45,7 +45,7 @@ const EXERCISE_POOL = [
     duration: 150,
     target: '12 Reps',
     tip: 'Extend spine tall, squeeze shoulder blades together firmly.',
-    sensor: 'Lumbar sensor at 89% accuracy.',
+    sensor: 'Targets: Erector spinae, multifidus, glutes.',
     image: '/exercises/back-extensions.webp',
     issues: ['slouch', 'forward_head'],
   },
@@ -56,7 +56,7 @@ const EXERCISE_POOL = [
     duration: 120,
     target: '30s each side',
     tip: 'Lunge forward and press hips downward, feeling the stretch through hip flexors.',
-    sensor: 'Hip sensor at 93% accuracy.',
+    sensor: 'Targets: Iliopsoas, rectus femoris, hip flexors.',
     image: '/exercises/hip-flexor-stretch.webp',
     issues: ['slouch'],
   },
@@ -67,7 +67,7 @@ const EXERCISE_POOL = [
     duration: 90,
     target: '15 Reps',
     tip: 'Squeeze shoulder blades together, hold for 3 seconds, then release.',
-    sensor: 'Scapular sensor at 90% accuracy.',
+    sensor: 'Targets: Rhomboids, mid trapezius, serratus anterior.',
     image: '/exercises/shoulder-blade-squeeze.webp',
     issues: ['shoulder_asymmetry', 'slouch'],
   },
@@ -78,7 +78,7 @@ const EXERCISE_POOL = [
     duration: 90,
     target: '10 Reps',
     tip: 'Alternate between arching your back (cow) and rounding it (cat) slowly.',
-    sensor: 'Thoracic sensor at 88% accuracy.',
+    sensor: 'Targets: Thoracic erectors, multifidus, hip flexors.',
     image: '/exercises/cat-cow-stretch.webp',
     issues: ['slouch', 'lateral_tilt'],
   },
@@ -89,7 +89,7 @@ const EXERCISE_POOL = [
     duration: 90,
     target: '10 each side',
     tip: 'Sit upright, rotate upper body slowly to each side while keeping hips still.',
-    sensor: 'Alignment sensor at 91% accuracy.',
+    sensor: 'Targets: Thoracic spine, obliques, hip flexors.',
     image: '/exercises/spinal-twist.webp',
     issues: ['slouch', 'lateral_tilt', 'shoulder_asymmetry'],
   },
@@ -100,7 +100,7 @@ const EXERCISE_POOL = [
     duration: 90,
     target: '30s hold x3',
     tip: 'Clasp hands behind back, lift chest and gently pull arms back.',
-    sensor: 'Pectoral sensor at 92% accuracy.',
+    sensor: 'Targets: Pectoralis major, anterior deltoid, biceps.',
     image: '/exercises/chest-opener-stretch.png',
     issues: ['forward_head', 'screen_distance', 'slouch'],
   },
@@ -111,7 +111,7 @@ const EXERCISE_POOL = [
     duration: 90,
     target: '10s hold x6',
     tip: 'Press head against hand in each direction without moving. Hold steady.',
-    sensor: 'Neck sensor at 93% accuracy.',
+    sensor: 'Targets: Deep cervical flexors, scalenes, sternocleidomastoid.',
     image: '/exercises/neck-isometrics.webp',
     issues: ['lateral_tilt', 'forward_head'],
   },
@@ -356,14 +356,16 @@ function LandingScreen() {
 // Phase 1 → greeting fades out, quote appears alone, centred
 // Phase 2 → quote fades out, report card appears (clean – no name/quote above)
 function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn, onSignOut }) {
-  const [phase, setPhase] = useState(0)
+  // Skip animation if workout just completed — jump straight to report card
+  const [phase, setPhase] = useState(workoutCompleted ? 2 : 0)
   const [showDetails, setShowDetails] = useState(false)
 
   useEffect(() => {
+    if (workoutCompleted) return // Already at phase 2, no timers needed
     const t1 = setTimeout(() => setPhase(1), 2200)   // show greeting 2.2 s
     const t2 = setTimeout(() => setPhase(2), 4600)   // show quote 2.4 s, then card
     return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [])
+  }, [workoutCompleted])
 
   // Each panel: absolutely positioned, stacked in the same space
   const panel = (p) => ({
@@ -704,7 +706,7 @@ function SessionScreen({ exercise, exerciseIndex, totalExercises, timeLeft, onPa
             <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #050505 0%, transparent 60%)' }} />
             <div className="absolute bottom-4 left-4 flex items-center gap-3 glass-panel px-4 py-2 rounded-full border border-vs-outline-variant/20">
               <span className="flex h-2 w-2 rounded-full bg-vs-primary animate-pulse" />
-              <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface">Tracking Synaptic Load</span>
+              <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface">Focus on form</span>
             </div>
           </div>
 
@@ -951,15 +953,18 @@ function CompleteScreen({ sessionData, exercises = DEFAULT_EXERCISES, onReturn, 
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div>
                 <p className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant mb-1">Active Time</p>
-                <p className="font-headline text-2xl text-vs-primary">{sessionData?.activeTime || '15'}<span className="text-sm ml-0.5">m</span></p>
+                {sessionData?.activeTime != null
+                  ? <p className="font-headline text-2xl text-vs-primary">{sessionData.activeTime}<span className="text-sm ml-0.5">m</span></p>
+                  : <p className="font-headline text-2xl text-vs-primary">{Math.round((sessionData?.totalDurationSec || 0) / 60)}<span className="text-sm ml-0.5">m</span></p>
+                }
               </div>
               <div>
                 <p className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant mb-1">Exercises</p>
                 <p className="font-headline text-2xl text-vs-tertiary">{sessionData?.exerciseCount || exercises.length}<span className="text-sm ml-0.5">done</span></p>
               </div>
               <div>
-                <p className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant mb-1">Neural Load</p>
-                <p className="font-headline text-2xl text-vs-on-surface">Low</p>
+                <p className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant mb-1">Total Duration</p>
+                <p className="font-headline text-2xl text-vs-on-surface">{Math.round((sessionData?.totalDurationSec || exercises.reduce((s, e) => s + e.duration, 0)) / 60)}<span className="text-sm ml-0.5">m</span></p>
               </div>
             </div>
 
@@ -1019,6 +1024,7 @@ export default function App() {
   const [workoutSaved, setWorkoutSaved] = useState(false)
   const [workoutCompleted, setWorkoutCompleted] = useState(false)
   const supabaseRef = useRef(null)
+  const workoutStartTimeRef = useRef(null) // Set when session actually begins
 
   // ── Adaptive Exercises ──
   const exercises = useMemo(() => selectExercises(sessionReport), [sessionReport])
@@ -1193,6 +1199,7 @@ export default function App() {
   }, [])
 
   const handleCountdownComplete = useCallback(() => {
+    workoutStartTimeRef.current = Date.now()
     setCurrentExerciseIndex(0)
     setTimeLeft(exercises[0].duration)
     setScreen('session')
@@ -1234,8 +1241,11 @@ export default function App() {
   }, [exercises])
 
   const sessionData = {
-    activeTime: Math.round((Date.now() - sessionStartTime) / 60000),
+    activeTime: workoutStartTimeRef.current
+      ? Math.max(1, Math.round((Date.now() - workoutStartTimeRef.current) / 60000))
+      : null,
     exerciseCount: exercises.length,
+    totalDurationSec: exercises.reduce((sum, ex) => sum + ex.duration, 0),
   }
 
   // ── Render ──
