@@ -216,7 +216,7 @@
       els.thresholdValue.textContent = els.thresholdSlider.value + 's';
     }
     if (els.durationSelect) {
-      const durationVal = stored.sessionDurationMs != null ? stored.sessionDurationMs : 300000;
+      const durationVal = (stored.sessionDurationMs !== null && stored.sessionDurationMs !== undefined) ? stored.sessionDurationMs : 300000;
       els.durationSelect.value = durationVal;
     }
     if (els.debugToggle) {

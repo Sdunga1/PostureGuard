@@ -104,7 +104,7 @@ async function loadSettings() {
     'postureEnabled', 'alertThresholdMs', 'apiKey', 'sessionDurationMs'
   ]);
   Object.assign(settings, stored);
-  if (stored.sessionDurationMs != null) sessionDurationMs = stored.sessionDurationMs;
+  if (stored.sessionDurationMs !== null && stored.sessionDurationMs !== undefined) sessionDurationMs = stored.sessionDurationMs;
 }
 
 async function loadCalibration() {
