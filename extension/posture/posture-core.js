@@ -365,23 +365,8 @@
     togglePreview();
   });
 
-  // Check if this tab should start the camera
-  // Only one tab runs the camera — ask background first
-  chrome.storage.local.get(['postureEnabled'], async (result) => {
-    if (result.postureEnabled) {
-      try {
-        const response = await chrome.runtime.sendMessage({ type: 'SHOULD_START_CAMERA' });
-        if (response && response.start) {
-          start();
-        } else {
-          console.log('[PostureGuard] Camera already running on another tab');
-        }
-      } catch (_e) {
-        // Background not ready, try starting anyway
-        start();
-      }
-    }
-  });
+  // Camera only starts when user explicitly toggles "Enable Monitoring" from the sidepanel.
+  // No auto-start — avoids race conditions on extension reload.
 
   // Expose for other modules
   window.PostureCore = {

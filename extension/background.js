@@ -102,6 +102,8 @@ async function notifyContentScriptsOfRestart() {
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log('[PostureGuard] Extension installed');
+  // Reset monitoring state so toggle starts fresh after reload
+  chrome.storage.local.set({ postureEnabled: false });
   loadSettings();
   loadCalibration();
 });
