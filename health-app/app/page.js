@@ -12,7 +12,6 @@ const EXERCISE_POOL = [
     duration: 105,
     target: '12 Reps',
     tip: 'Keep your eyes level and tuck your chin toward your throat.',
-    sensor: 'Targets: Deep cervical flexors, upper trapezius.',
     image: '/exercises/chin-tucks.webp',
     issues: ['forward_head', 'slouch'],
   },
@@ -23,7 +22,6 @@ const EXERCISE_POOL = [
     duration: 120,
     target: '15 Reps',
     tip: 'Roll shoulders backward in a slow, full circular motion.',
-    sensor: 'Targets: Deltoids, rotator cuff, upper trapezius.',
     image: '/exercises/shoulder-rolls.webp',
     issues: ['shoulder_asymmetry', 'slouch'],
   },
@@ -34,7 +32,6 @@ const EXERCISE_POOL = [
     duration: 90,
     target: '10 Reps',
     tip: 'Gently tilt head side to side, hold each position for 3 seconds.',
-    sensor: 'Targets: Sternocleidomastoid, levator scapulae.',
     image: '/exercises/neck-stretches.webp',
     issues: ['lateral_tilt', 'forward_head'],
   },
@@ -45,7 +42,6 @@ const EXERCISE_POOL = [
     duration: 150,
     target: '12 Reps',
     tip: 'Extend spine tall, squeeze shoulder blades together firmly.',
-    sensor: 'Targets: Erector spinae, multifidus, glutes.',
     image: '/exercises/back-extensions.webp',
     issues: ['slouch', 'forward_head'],
   },
@@ -56,7 +52,6 @@ const EXERCISE_POOL = [
     duration: 120,
     target: '30s each side',
     tip: 'Lunge forward and press hips downward, feeling the stretch through hip flexors.',
-    sensor: 'Targets: Iliopsoas, rectus femoris, hip flexors.',
     image: '/exercises/hip-flexor-stretch.webp',
     issues: ['slouch'],
   },
@@ -67,7 +62,6 @@ const EXERCISE_POOL = [
     duration: 90,
     target: '15 Reps',
     tip: 'Squeeze shoulder blades together, hold for 3 seconds, then release.',
-    sensor: 'Targets: Rhomboids, mid trapezius, serratus anterior.',
     image: '/exercises/shoulder-blade-squeeze.webp',
     issues: ['shoulder_asymmetry', 'slouch'],
   },
@@ -78,7 +72,6 @@ const EXERCISE_POOL = [
     duration: 90,
     target: '10 Reps',
     tip: 'Alternate between arching your back (cow) and rounding it (cat) slowly.',
-    sensor: 'Targets: Thoracic erectors, multifidus, hip flexors.',
     image: '/exercises/cat-cow-stretch.webp',
     issues: ['slouch', 'lateral_tilt'],
   },
@@ -89,7 +82,6 @@ const EXERCISE_POOL = [
     duration: 90,
     target: '10 each side',
     tip: 'Sit upright, rotate upper body slowly to each side while keeping hips still.',
-    sensor: 'Targets: Thoracic spine, obliques, hip flexors.',
     image: '/exercises/spinal-twist.webp',
     issues: ['slouch', 'lateral_tilt', 'shoulder_asymmetry'],
   },
@@ -100,7 +92,6 @@ const EXERCISE_POOL = [
     duration: 90,
     target: '30s hold x3',
     tip: 'Clasp hands behind back, lift chest and gently pull arms back.',
-    sensor: 'Targets: Pectoralis major, anterior deltoid, biceps.',
     image: '/exercises/chest-opener-stretch.png',
     issues: ['forward_head', 'screen_distance', 'slouch'],
   },
@@ -111,7 +102,6 @@ const EXERCISE_POOL = [
     duration: 90,
     target: '10s hold x6',
     tip: 'Press head against hand in each direction without moving. Hold steady.',
-    sensor: 'Targets: Deep cervical flexors, scalenes, sternocleidomastoid.',
     image: '/exercises/neck-isometrics.webp',
     issues: ['lateral_tilt', 'forward_head'],
   },
@@ -521,24 +511,6 @@ function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn,
                 </div>
               )}
 
-              {/* Neural Stream Viz */}
-              <div className="w-full h-24 rounded-xl bg-vs-surface-low flex items-end justify-center overflow-hidden relative px-4 pb-3 pt-2">
-                <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(76,215,246,0.08) 0%, transparent 50%, rgba(194,216,248,0.06) 100%)' }} />
-                <div className="flex gap-1.5 items-end h-14">
-                  {[8, 10, 6, 9, 7, 11, 5, 10, 8, 12, 7, 9, 6, 11, 8].map((h, i) => (
-                    <div
-                      key={i}
-                      className="w-2 rounded-t-full"
-                      style={{
-                        height: `${h * 3.5}px`,
-                        background: i % 3 === 0 ? 'rgba(76,215,246,0.6)' : i % 3 === 1 ? 'rgba(76,215,246,0.4)' : 'rgba(194,216,248,0.4)',
-                      }}
-                    />
-                  ))}
-                </div>
-                <span className="absolute bottom-2 right-3 font-label text-[8px] text-vs-on-surface-variant uppercase tracking-widest">Live Neural Stream</span>
-              </div>
-
               {/* CTA */}
               {workoutCompleted && sessionReport ? (
                 <div className="flex flex-col gap-3">
@@ -724,7 +696,7 @@ function SessionScreen({ exercise, exerciseIndex, totalExercises, timeLeft, onPa
             </div>
           </div>
 
-          {/* Right: Tips (desktop) */}
+          {/* Right: Tip (desktop) */}
           <div className="hidden md:flex col-span-2 flex-col gap-4">
             <div className="p-4 rounded-2xl bg-vs-surface-mid border-t border-vs-outline-variant/10">
               <div className="w-6 h-6 rounded-full bg-vs-tertiary/20 flex items-center justify-center mb-2">
@@ -733,14 +705,6 @@ function SessionScreen({ exercise, exerciseIndex, totalExercises, timeLeft, onPa
                 </svg>
               </div>
               <p className="font-body text-xs text-vs-on-surface-variant leading-relaxed">{exercise.tip}</p>
-            </div>
-            <div className="p-4 rounded-2xl bg-vs-surface-mid border-t border-vs-outline-variant/10">
-              <div className="w-6 h-6 rounded-full bg-vs-primary/20 flex items-center justify-center mb-2">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4CD7F6" strokeWidth="2">
-                  <circle cx="12" cy="12" r="3" /><path d="M6.3 6.3a8 8 0 0 0 0 11.4M17.7 6.3a8 8 0 0 1 0 11.4" />
-                </svg>
-              </div>
-              <p className="font-body text-xs text-vs-on-surface-variant leading-relaxed">{exercise.sensor}</p>
             </div>
           </div>
         </div>
@@ -862,13 +826,6 @@ function PausedScreen({ exercise, nextExercise, pausedSeconds, onResume, user, o
           </p>
         </div>
 
-        {/* Ambient tip */}
-        <div className="fixed bottom-8 right-6 hidden lg:block">
-          <div className="glass-panel px-4 py-3 rounded-full border border-vs-outline-variant/15 flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-vs-tertiary animate-pulse" />
-            <span className="font-label text-xs tracking-wide text-vs-on-surface-variant">Focus on your lower back during the next set</span>
-          </div>
-        </div>
       </main>
     </div>
   )
