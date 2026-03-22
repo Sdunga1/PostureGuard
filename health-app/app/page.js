@@ -345,24 +345,28 @@ function LandingScreen() {
 // Phase 1 → greeting fades out, quote appears alone, centred
 // Phase 2 → quote fades out, report card appears (clean – no name/quote above)
 function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn, onSignOut }) {
-  // Animation plays when coming from extension (?id= in URL), once per day
-  // Navigating within the app (no ?id=) always skips it
+  // Decide once at mount whether to skip — never recalculate on re-renders
+  // Animation plays when: came from extension (?id= in URL), not shown today, workout not done
+  const [skipAnim] = useState(() => {
+    if (workoutCompleted) return true
+    if (typeof window === 'undefined') return true
+    const hasId = new URLSearchParams(window.location.search).has('id')
+    if (!hasId) return true // navigating within app — skip
+    const key = `pg_intro_shown_${new Date().toDateString()}`
+    if (sessionStorage.getItem(key)) return true // already played today
+    sessionStorage.setItem(key, '1') // mark as played
+    return false
+  })
   const hasSessionInUrl = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('id')
-  const animKey = `pg_intro_shown_${new Date().toDateString()}`
-  const alreadyShownToday = typeof window !== 'undefined' && !!sessionStorage.getItem(animKey)
-  // Play if: from extension AND not already shown today AND workout not completed
-  const skipAnim = workoutCompleted || alreadyShownToday || !hasSessionInUrl
   const [phase, setPhase] = useState(skipAnim ? 2 : 0)
   const [showDetails, setShowDetails] = useState(false)
 
   useEffect(() => {
     if (skipAnim) return
-    // Mark as shown for today so repeated clicks on Open Health App skip it
-    sessionStorage.setItem(animKey, '1')
     const t1 = setTimeout(() => setPhase(1), 2200)
     const t2 = setTimeout(() => setPhase(2), 4600)
     return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [skipAnim, animKey])
+  }, [skipAnim])
 
   // Each panel: absolutely positioned, stacked in the same space
   const panel = (p) => ({
