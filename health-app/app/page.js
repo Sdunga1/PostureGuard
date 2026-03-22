@@ -537,22 +537,15 @@ function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn,
                   </a>
                 </div>
               ) : hasSessionInUrl ? (
-                // Viewing a historical posture session from insights — no workout done yet
-                <div className="flex flex-col gap-3">
-                  <button
-                    onClick={onStart}
-                    className="vs-btn-primary w-full py-5 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm"
-                  >
-                    Start Recovery Session
-                  </button>
-                  <a
-                    href="/dashboard"
-                    className="w-full py-3 rounded-lg font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-primary transition-colors border border-vs-outline-variant/20 hover:border-vs-primary/30 text-center block"
-                  >
-                    Back to Insights
-                  </a>
-                </div>
+                // Came from insights — just show Back to Insights, no start button
+                <a
+                  href="/dashboard"
+                  className="vs-btn-primary w-full py-5 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm text-center block"
+                >
+                  Back to Insights
+                </a>
               ) : (
+                // Fresh home — start workout
                 <button
                   onClick={onStart}
                   className="vs-btn-primary w-full py-5 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm"
