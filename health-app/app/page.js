@@ -53,12 +53,6 @@ export default async function LandingPage() {
 
           {/* Left: Content */}
           <div className="lg:col-span-6 z-10">
-            {/* Status badge */}
-            <div className="inline-flex items-center space-x-3 mb-6 bg-[#c3f5ff]/5 border border-[#c3f5ff]/10 px-4 py-1.5 rounded-full">
-              <span className="w-2 h-2 rounded-full bg-[#66d9cc] animate-pulse-soft" />
-              <span className="font-headline text-[10px] uppercase tracking-[0.2em] text-[#c3f5ff]">System Status: Optimal</span>
-            </div>
-
             <h1 className="font-headline text-5xl md:text-7xl font-bold tracking-tighter text-[#e5e2e1] mb-4 leading-[0.9]">
               Your posture,&nbsp;<br />
               <span className="text-[#c3f5ff]/80">reimagined.</span>
@@ -94,79 +88,123 @@ export default async function LandingPage() {
               {/* Rotating ring */}
               <div className="absolute inset-12 border-[0.5px] border-[#c3f5ff]/5 rounded-full border-dashed animate-spin-slow" />
 
-              {/* SVG Spine */}
-              <svg className="w-80 h-auto drop-shadow-[0_0_20px_rgba(195,245,255,0.2)]" viewBox="0 0 200 400">
+              {/* SVG Spine — S-curved with lordosis (cervical/lumbar) & kyphosis (thoracic) */}
+              <svg className="w-80 h-auto drop-shadow-[0_0_20px_rgba(195,245,255,0.2)]" viewBox="0 0 260 520">
                 <defs>
                   <linearGradient id="vertebraGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%"   stopColor="rgba(195,245,255,0.1)" />
-                    <stop offset="50%"  stopColor="rgba(195,245,255,0.02)" />
-                    <stop offset="100%" stopColor="rgba(195,245,255,0.1)" />
+                    <stop offset="0%"   stopColor="rgba(195,245,255,0.12)" />
+                    <stop offset="50%"  stopColor="rgba(195,245,255,0.03)" />
+                    <stop offset="100%" stopColor="rgba(195,245,255,0.12)" />
+                  </linearGradient>
+                  <linearGradient id="lumbarGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%"   stopColor="rgba(255,107,74,0.1)" />
+                    <stop offset="50%"  stopColor="rgba(255,107,74,0.02)" />
+                    <stop offset="100%" stopColor="rgba(255,107,74,0.1)" />
                   </linearGradient>
                 </defs>
                 <g>
-                  {/* Spine line */}
-                  <line x1="100" y1="20" x2="100" y2="270" stroke="rgba(195,245,255,0.1)" strokeWidth="0.5" />
-                  {/* Cervical C1 */}
+                  {/* S-curve spine line */}
+                  <path d="M148 15 C158 60, 155 80, 140 120 C125 160, 115 200, 110 240 C108 270, 120 310, 145 360 C155 380, 148 420, 140 470" fill="none" stroke="rgba(195,245,255,0.08)" strokeWidth="0.5" />
+
+                  {/* ── Cervical C1-C5 (lordotic curve — offsets right) ── */}
+                  <g className="vertebra-anim" style={{ animationDelay: '0.05s' }}>
+                    <rect x="126" y="12" width="42" height="10" rx="4" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.9" />
+                    <ellipse cx="147" cy="24" rx="14" ry="1.2" fill="#c3f5ff" opacity="0.15" className="animate-disc-pulse" style={{ animationDelay: '0s' }} />
+                  </g>
                   <g className="vertebra-anim" style={{ animationDelay: '0.1s' }}>
-                    <rect x="73" y="20" width="54" height="12" rx="3" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="1" />
-                    <ellipse cx="100" cy="35" rx="18" ry="1.5" fill="#c3f5ff" className="animate-disc-pulse" style={{ animationDelay: '0s', transformOrigin: 'center' }} />
+                    <rect x="123" y="28" width="48" height="11" rx="4" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.9" />
+                    <ellipse cx="147" cy="41" rx="17" ry="1.2" fill="#c3f5ff" opacity="0.15" className="animate-disc-pulse" style={{ animationDelay: '0.05s' }} />
                   </g>
-                  {/* Cervical C2 */}
+                  <g className="vertebra-anim" style={{ animationDelay: '0.15s' }}>
+                    <rect x="119" y="45" width="54" height="12" rx="4" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.9" />
+                    <ellipse cx="146" cy="59" rx="20" ry="1.3" fill="#c3f5ff" opacity="0.15" className="animate-disc-pulse" style={{ animationDelay: '0.1s' }} />
+                  </g>
                   <g className="vertebra-anim" style={{ animationDelay: '0.2s' }}>
-                    <rect x="70" y="38" width="60" height="14" rx="3" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="1" />
-                    <ellipse cx="100" cy="55" rx="22" ry="1.5" fill="#c3f5ff" className="animate-disc-pulse" style={{ animationDelay: '0.1s', transformOrigin: 'center' }} />
+                    <rect x="114" y="63" width="60" height="13" rx="4" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.9" />
+                    <ellipse cx="144" cy="78" rx="23" ry="1.3" fill="#c3f5ff" opacity="0.15" className="animate-disc-pulse" style={{ animationDelay: '0.15s' }} />
                   </g>
-                  {/* Cervical C3 */}
+                  <g className="vertebra-anim" style={{ animationDelay: '0.25s' }}>
+                    <rect x="108" y="82" width="66" height="14" rx="4" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.85" />
+                    <ellipse cx="141" cy="98" rx="26" ry="1.4" fill="#c3f5ff" opacity="0.15" className="animate-disc-pulse" style={{ animationDelay: '0.2s' }} />
+                  </g>
+
+                  {/* ── Thoracic T1-T6 (kyphotic curve — offsets left) ── */}
                   <g className="vertebra-anim" style={{ animationDelay: '0.3s' }}>
-                    <rect x="67" y="58" width="66" height="16" rx="4" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="1" />
-                    <ellipse cx="100" cy="78" rx="26" ry="1.5" fill="#c3f5ff" className="animate-disc-pulse" style={{ animationDelay: '0.2s', transformOrigin: 'center' }} />
+                    <rect x="100" y="102" width="72" height="16" rx="5" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.8" />
+                    <ellipse cx="136" cy="120" rx="28" ry="1.5" fill="#c3f5ff" opacity="0.12" className="animate-disc-pulse" style={{ animationDelay: '0.25s' }} />
                   </g>
-                  {/* Thoracic T1 */}
+                  <g className="vertebra-anim" style={{ animationDelay: '0.35s' }}>
+                    <rect x="93" y="124" width="78" height="17" rx="5" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.8" />
+                    <ellipse cx="132" cy="143" rx="30" ry="1.5" fill="#c3f5ff" opacity="0.12" className="animate-disc-pulse" style={{ animationDelay: '0.3s' }} />
+                  </g>
                   <g className="vertebra-anim" style={{ animationDelay: '0.4s' }}>
-                    <rect x="63" y="82" width="74" height="20" rx="4" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="1" />
-                    <ellipse cx="100" cy="105" rx="30" ry="2" fill="#c3f5ff" className="animate-disc-pulse" style={{ animationDelay: '0.3s', transformOrigin: 'center' }} />
+                    <rect x="87" y="147" width="84" height="18" rx="5" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.75" />
+                    <ellipse cx="129" cy="167" rx="32" ry="1.6" fill="#c3f5ff" opacity="0.12" className="animate-disc-pulse" style={{ animationDelay: '0.35s' }} />
                   </g>
-                  {/* Thoracic T2 */}
+                  <g className="vertebra-anim" style={{ animationDelay: '0.45s' }}>
+                    <rect x="83" y="171" width="88" height="19" rx="5" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.75" />
+                    <ellipse cx="127" cy="192" rx="34" ry="1.6" fill="#c3f5ff" opacity="0.12" className="animate-disc-pulse" style={{ animationDelay: '0.4s' }} />
+                  </g>
                   <g className="vertebra-anim" style={{ animationDelay: '0.5s' }}>
-                    <rect x="59" y="110" width="82" height="24" rx="5" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="1" />
-                    <ellipse cx="100" cy="138" rx="34" ry="2" fill="#c3f5ff" className="animate-disc-pulse" style={{ animationDelay: '0.4s', transformOrigin: 'center' }} />
+                    <rect x="80" y="196" width="92" height="20" rx="5" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.7" />
+                    <ellipse cx="126" cy="218" rx="36" ry="1.7" fill="#c3f5ff" opacity="0.1" className="animate-disc-pulse" style={{ animationDelay: '0.45s' }} />
                   </g>
-                  {/* Lumbar L1 */}
+                  <g className="vertebra-anim" style={{ animationDelay: '0.55s' }}>
+                    <rect x="79" y="222" width="96" height="21" rx="5" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="0.8" opacity="0.7" />
+                    <ellipse cx="127" cy="245" rx="38" ry="1.8" fill="#c3f5ff" opacity="0.1" className="animate-disc-pulse" style={{ animationDelay: '0.5s' }} />
+                  </g>
+
+                  {/* ── Lumbar L1-L4 (lordotic curve — offsets right, warning color) ── */}
                   <g className="vertebra-anim" style={{ animationDelay: '0.6s' }}>
-                    <rect x="55" y="145" width="90" height="28" rx="5" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="1" />
-                    <ellipse cx="100" cy="178" rx="38" ry="2.5" fill="#c3f5ff" className="animate-disc-pulse" style={{ animationDelay: '0.5s', transformOrigin: 'center' }} />
+                    <rect x="84" y="250" width="100" height="24" rx="6" fill="url(#lumbarGradient)" stroke="#ff6b4a" strokeWidth="0.8" opacity="0.8" />
+                    <ellipse cx="134" cy="277" rx="40" ry="2" fill="#ff6b4a" opacity="0.1" className="animate-disc-pulse" style={{ animationDelay: '0.55s' }} />
                   </g>
-                  {/* Lumbar L2 */}
+                  <g className="vertebra-anim" style={{ animationDelay: '0.65s' }}>
+                    <rect x="92" y="281" width="108" height="27" rx="6" fill="url(#lumbarGradient)" stroke="#ff6b4a" strokeWidth="0.8" opacity="0.8" />
+                    <ellipse cx="146" cy="311" rx="42" ry="2.2" fill="#ff6b4a" opacity="0.1" className="animate-disc-pulse" style={{ animationDelay: '0.6s' }} />
+                  </g>
                   <g className="vertebra-anim" style={{ animationDelay: '0.7s' }}>
-                    <rect x="50" y="185" width="100" height="32" rx="6" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="1" />
-                    <ellipse cx="100" cy="222" rx="42" ry="3" fill="#c3f5ff" className="animate-disc-pulse" style={{ animationDelay: '0.6s', transformOrigin: 'center' }} />
+                    <rect x="99" y="315" width="114" height="30" rx="6" fill="url(#lumbarGradient)" stroke="#ff6b4a" strokeWidth="0.8" opacity="0.8" />
+                    <ellipse cx="156" cy="348" rx="44" ry="2.4" fill="#ff6b4a" opacity="0.1" className="animate-disc-pulse" style={{ animationDelay: '0.65s' }} />
                   </g>
-                  {/* Sacral */}
+                  <g className="vertebra-anim" style={{ animationDelay: '0.75s' }}>
+                    <rect x="103" y="352" width="118" height="32" rx="6" fill="url(#lumbarGradient)" stroke="#ff6b4a" strokeWidth="0.8" opacity="0.75" />
+                    <ellipse cx="162" cy="387" rx="46" ry="2.5" fill="#ff6b4a" opacity="0.08" className="animate-disc-pulse" style={{ animationDelay: '0.7s' }} />
+                  </g>
+
+                  {/* ── Sacral S1-S2 (curves back) ── */}
                   <g className="vertebra-anim" style={{ animationDelay: '0.8s' }}>
-                    <rect x="45" y="230" width="110" height="38" rx="6" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="1" />
+                    <rect x="96" y="392" width="112" height="28" rx="6" fill="url(#vertebraGradient)" stroke="#66d9cc" strokeWidth="0.8" opacity="0.7" />
+                    <ellipse cx="152" cy="423" rx="42" ry="2" fill="#66d9cc" opacity="0.1" className="animate-disc-pulse" style={{ animationDelay: '0.75s' }} />
                   </g>
+                  <g className="vertebra-anim" style={{ animationDelay: '0.85s' }}>
+                    <rect x="89" y="427" width="102" height="25" rx="6" fill="url(#vertebraGradient)" stroke="#66d9cc" strokeWidth="0.8" opacity="0.65" />
+                    <ellipse cx="140" cy="455" rx="38" ry="1.8" fill="#66d9cc" opacity="0.08" className="animate-disc-pulse" style={{ animationDelay: '0.8s' }} />
+                  </g>
+                  <g className="vertebra-anim" style={{ animationDelay: '0.9s' }}>
+                    <rect x="84" y="459" width="88" height="20" rx="6" fill="url(#vertebraGradient)" stroke="#66d9cc" strokeWidth="0.8" opacity="0.6" />
+                  </g>
+
                   {/* HUD Connectors */}
-                  <path d="M127 26 L165 26" fill="none" stroke="#c3f5ff" strokeDasharray="2 2" strokeWidth="0.5" />
-                  <circle cx="127" cy="26" r="1.5" fill="#c3f5ff" />
-                  <path d="M150 201 L180 201" fill="none" stroke="#c3f5ff" strokeDasharray="2 2" strokeWidth="0.5" />
-                  <circle cx="150" cy="201" r="1.5" fill="#c3f5ff" />
-                  <path d="M155 249 L185 249" fill="none" stroke="#c3f5ff" strokeDasharray="2 2" strokeWidth="0.5" />
-                  <circle cx="155" cy="249" r="1.5" fill="#c3f5ff" />
-                  <path d="M155 268 L175 268" fill="none" stroke="#c3f5ff" strokeDasharray="2 2" strokeWidth="0.5" />
-                  <circle cx="155" cy="268" r="1.5" fill="#c3f5ff" />
+                  <path d="M168 17 L210 17" fill="none" stroke="#c3f5ff" strokeDasharray="2 2" strokeWidth="0.5" />
+                  <circle cx="168" cy="17" r="1.5" fill="#c3f5ff" />
+                  <path d="M200 340 L230 340" fill="none" stroke="#ff6b4a" strokeDasharray="2 2" strokeWidth="0.5" />
+                  <circle cx="200" cy="340" r="1.5" fill="#ff6b4a" />
+                  <path d="M198 440 L228 440" fill="none" stroke="#66d9cc" strokeDasharray="2 2" strokeWidth="0.5" />
+                  <circle cx="198" cy="440" r="1.5" fill="#66d9cc" />
                 </g>
               </svg>
 
               {/* Readout: CERVICAL */}
-              <div className="absolute top-16 right-4 font-headline text-[10px] tracking-widest text-[#c3f5ff] bg-[#131313]/80 backdrop-blur px-3 py-1 border-l-2 border-[#c3f5ff] shadow-[0_0_15px_rgba(195,245,255,0.1)]">
+              <div className="absolute top-8 right-0 font-headline text-[10px] tracking-widest text-[#c3f5ff] bg-[#131313]/80 backdrop-blur px-3 py-1 border-l-2 border-[#c3f5ff] shadow-[0_0_15px_rgba(195,245,255,0.1)]">
                 CERVICAL ●──── 94%
               </div>
               {/* Readout: LUMBAR */}
-              <div className="absolute bottom-48 right-0 font-headline text-[10px] tracking-widest text-[#983c1e] bg-[#ffc3b1]/10 backdrop-blur px-3 py-1 border-l-2 border-[#983c1e] shadow-[0_0_15px_rgba(152,60,30,0.2)]">
+              <div className="absolute bottom-36 right-0 font-headline text-[10px] tracking-widest text-[#ff6b4a] bg-[#ff6b4a]/10 backdrop-blur px-3 py-1 border-l-2 border-[#ff6b4a] shadow-[0_0_15px_rgba(255,107,74,0.15)]">
                 LUMBAR ●──── 72% <span className="text-xs font-bold">⚠</span>
               </div>
               {/* Readout: SACRAL */}
-              <div className="absolute bottom-32 right-0 font-headline text-[10px] tracking-widest text-[#66d9cc] bg-[#66d9cc]/10 backdrop-blur px-3 py-1 border-l-2 border-[#66d9cc] shadow-[0_0_15px_rgba(102,217,204,0.1)]">
+              <div className="absolute bottom-20 right-0 font-headline text-[10px] tracking-widest text-[#66d9cc] bg-[#66d9cc]/10 backdrop-blur px-3 py-1 border-l-2 border-[#66d9cc] shadow-[0_0_15px_rgba(102,217,204,0.1)]">
                 SACRAL ●──── 88%
               </div>
 
