@@ -12,8 +12,7 @@ const EXERCISE_POOL = [
     duration: 105,
     target: '12 Reps',
     tip: 'Keep your eyes level and tuck your chin toward your throat.',
-    sensor: 'C-Spine sensor at 94% accuracy.',
-    image: 'https://images.unsplash.com/photo-1654613412232-10aaf36df8a6?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85&w=900',
+    image: '/exercises/chin-tucks.webp',
     issues: ['forward_head', 'slouch'],
   },
   {
@@ -23,8 +22,7 @@ const EXERCISE_POOL = [
     duration: 120,
     target: '15 Reps',
     tip: 'Roll shoulders backward in a slow, full circular motion.',
-    sensor: 'Shoulder sensor at 92% accuracy.',
-    image: 'https://images.pexels.com/photos/7289370/pexels-photo-7289370.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940',
+    image: '/exercises/shoulder-rolls.webp',
     issues: ['shoulder_asymmetry', 'slouch'],
   },
   {
@@ -34,8 +32,7 @@ const EXERCISE_POOL = [
     duration: 90,
     target: '10 Reps',
     tip: 'Gently tilt head side to side, hold each position for 3 seconds.',
-    sensor: 'Neck sensor at 91% accuracy.',
-    image: 'https://images.pexels.com/photos/6339450/pexels-photo-6339450.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940',
+    image: '/exercises/neck_stretch.mp4',
     issues: ['lateral_tilt', 'forward_head'],
   },
   {
@@ -45,8 +42,7 @@ const EXERCISE_POOL = [
     duration: 150,
     target: '12 Reps',
     tip: 'Extend spine tall, squeeze shoulder blades together firmly.',
-    sensor: 'Lumbar sensor at 89% accuracy.',
-    image: 'https://images.unsplash.com/photo-1563427632003-20f6943d3a6d?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85&w=900',
+    image: '/exercises/back-stretch.mp4',
     issues: ['slouch', 'forward_head'],
   },
   {
@@ -56,8 +52,7 @@ const EXERCISE_POOL = [
     duration: 120,
     target: '30s each side',
     tip: 'Lunge forward and press hips downward, feeling the stretch through hip flexors.',
-    sensor: 'Hip sensor at 93% accuracy.',
-    image: 'https://images.unsplash.com/photo-1618069174551-90141d7d4e7f?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85&w=900',
+    image: '/exercises/hip_stretch.mp4',
     issues: ['slouch'],
   },
   {
@@ -67,31 +62,28 @@ const EXERCISE_POOL = [
     duration: 90,
     target: '15 Reps',
     tip: 'Squeeze shoulder blades together, hold for 3 seconds, then release.',
-    sensor: 'Scapular sensor at 90% accuracy.',
-    image: 'https://images.pexels.com/photos/4498606/pexels-photo-4498606.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940',
+    image: '/exercises/shoulder_sqeeze.mp4',
     issues: ['shoulder_asymmetry', 'slouch'],
   },
   {
     id: 7,
-    name: 'Thoracic Rotation',
+    name: 'Cat-Cow Stretch',
     subtitle: 'Spinal Mobility Drill',
     duration: 90,
-    target: '10 each side',
-    tip: 'Sit upright, rotate upper body slowly to each side while keeping hips still.',
-    sensor: 'Thoracic sensor at 88% accuracy.',
-    image: 'https://images.pexels.com/photos/4056535/pexels-photo-4056535.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940',
+    target: '10 Reps',
+    tip: 'Alternate between arching your back (cow) and rounding it (cat) slowly.',
+    image: '/exercises/cat-cow-stretch.webp',
     issues: ['slouch', 'lateral_tilt'],
   },
   {
     id: 8,
-    name: 'Wall Angels',
-    subtitle: 'Postural Correction Protocol',
-    duration: 120,
-    target: '12 Reps',
-    tip: 'Stand flat against a wall, slide arms up and down keeping contact with the wall.',
-    sensor: 'Alignment sensor at 91% accuracy.',
-    image: 'https://images.pexels.com/photos/6456300/pexels-photo-6456300.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940',
-    issues: ['forward_head', 'shoulder_asymmetry', 'screen_distance'],
+    name: 'Spinal Twist',
+    subtitle: 'Rotational Release Protocol',
+    duration: 90,
+    target: '10 each side',
+    tip: 'Sit upright, rotate upper body slowly to each side while keeping hips still.',
+    image: '/exercises/spinal-twist.webp',
+    issues: ['slouch', 'lateral_tilt', 'shoulder_asymmetry'],
   },
   {
     id: 9,
@@ -100,8 +92,7 @@ const EXERCISE_POOL = [
     duration: 90,
     target: '30s hold x3',
     tip: 'Clasp hands behind back, lift chest and gently pull arms back.',
-    sensor: 'Pectoral sensor at 92% accuracy.',
-    image: 'https://images.pexels.com/photos/4498151/pexels-photo-4498151.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940',
+    image: '/exercises/chest-opener-stretch.png',
     issues: ['forward_head', 'screen_distance', 'slouch'],
   },
   {
@@ -111,8 +102,7 @@ const EXERCISE_POOL = [
     duration: 90,
     target: '10s hold x6',
     tip: 'Press head against hand in each direction without moving. Hold steady.',
-    sensor: 'Neck sensor at 93% accuracy.',
-    image: 'https://images.pexels.com/photos/5473186/pexels-photo-5473186.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940',
+    image: '/exercises/neck-isometrics.webp',
     issues: ['lateral_tilt', 'forward_head'],
   },
 ]
@@ -220,7 +210,6 @@ function TopHeader({ title = 'PostureGuard', subTitle = '', user = null, onSignI
           <div className="hidden md:flex items-center gap-8">
             <span className="font-label text-xs uppercase tracking-widest text-vs-primary cursor-pointer">Flow</span>
             <a href="/dashboard" className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Insights</a>
-            <span className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Biometrics</span>
           </div>
           {user ? (
             <div className="flex items-center gap-3">
@@ -355,19 +344,34 @@ function LandingScreen() {
 // Phase 0 → greeting alone, centred, full screen
 // Phase 1 → greeting fades out, quote appears alone, centred
 // Phase 2 → quote fades out, report card appears (clean – no name/quote above)
-function IntroScreen({ onStart, user, sessionReport, onSignIn, onSignOut }) {
-  const [phase, setPhase] = useState(0)
+function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn, onSignOut }) {
+  // Decide once at mount whether to skip — never recalculate on re-renders
+  // Animation plays when: came from extension (?id= in URL), not shown today, workout not done
+  const [skipAnim] = useState(() => {
+    if (workoutCompleted) return true
+    if (typeof window === 'undefined') return true
+    const hasId = new URLSearchParams(window.location.search).has('id')
+    if (!hasId) return true // navigating within app — skip
+    const key = `pg_intro_shown_${new Date().toDateString()}`
+    if (sessionStorage.getItem(key)) return true // already played today
+    sessionStorage.setItem(key, '1') // mark as played
+    return false
+  })
+  const cameFromInsights = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('from') === 'insights'
+  const [phase, setPhase] = useState(skipAnim ? 2 : 0)
+  const [showDetails, setShowDetails] = useState(false)
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase(1), 2200)   // show greeting 2.2 s
-    const t2 = setTimeout(() => setPhase(2), 4600)   // show quote 2.4 s, then card
+    if (skipAnim) return
+    const t1 = setTimeout(() => setPhase(1), 2200)
+    const t2 = setTimeout(() => setPhase(2), 4600)
     return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [])
+  }, [skipAnim])
 
   // Each panel: absolutely positioned, stacked in the same space
   const panel = (p) => ({
-    position: 'absolute',
-    inset: 0,
+    position: p === 2 ? 'relative' : 'absolute',
+    inset: p === 2 ? undefined : 0,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -390,8 +394,8 @@ function IntroScreen({ onStart, user, sessionReport, onSignIn, onSignOut }) {
       <div className="fixed inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(76,215,246,0.06) 0%, transparent 60%)' }} />
 
       <main className="relative flex-1 flex items-center justify-center px-6 pt-20 pb-10 overflow-hidden">
-        {/* Fixed-height stage — all three panels overlap here */}
-        <div className="relative w-full max-w-xl" style={{ height: '520px' }}>
+        {/* Stage — panels 0 & 1 are absolute, panel 2 flows naturally */}
+        <div className="relative w-full max-w-xl" style={{ minHeight: '520px' }}>
 
           {/* ── Panel 0 : Greeting ── */}
           <div style={panel(0)} className="px-4">
@@ -438,11 +442,11 @@ function IntroScreen({ onStart, user, sessionReport, onSignIn, onSignOut }) {
                       </div>
                     </div>
                     <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
-                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Head Tilt</span>
+                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Head Tilt <span className="normal-case opacity-50">(last 30s)</span></span>
                       <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">{sessionReport.metrics?.avgHeadTilt != null ? `${Math.round(sessionReport.metrics.avgHeadTilt)}°` : '--'}</span>
                     </div>
                     <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
-                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Slouch Angle</span>
+                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Slouch Angle <span className="normal-case opacity-50">(last 30s)</span></span>
                       <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">{sessionReport.metrics?.avgSlouchAngle != null ? `${sessionReport.metrics.avgSlouchAngle.toFixed(1)}°` : '--'}</span>
                     </div>
                   </div>
@@ -478,22 +482,30 @@ function IntroScreen({ onStart, user, sessionReport, onSignIn, onSignOut }) {
                       }</span>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
-                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Shoulder Health</span>
-                      <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">{sessionReport.metrics?.avgShoulderAngle != null ? `${Math.abs(sessionReport.metrics.avgShoulderAngle).toFixed(1)}°` : '--'}</span>
+                  {showDetails && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
+                        <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Shoulder Health</span>
+                        <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">{sessionReport.metrics?.avgShoulderAngle != null ? `${Math.abs(sessionReport.metrics.avgShoulderAngle).toFixed(1)}°` : '--'}</span>
+                      </div>
+                      <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
+                        <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Best Streak</span>
+                        <span className="font-headline text-3xl font-bold text-vs-primary mt-1">{(() => {
+                          const s = sessionReport.metrics?.longestGoodStreak;
+                          if (s == null) return '--';
+                          const m = Math.floor(s / 60);
+                          const sec = Math.round(s % 60);
+                          return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+                        })()}</span>
+                      </div>
                     </div>
-                    <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
-                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Best Streak</span>
-                      <span className="font-headline text-3xl font-bold text-vs-primary mt-1">{(() => {
-                        const s = sessionReport.metrics?.longestGoodStreak;
-                        if (s == null) return '--';
-                        const m = Math.floor(s / 60);
-                        const sec = Math.round(s % 60);
-                        return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
-                      })()}</span>
-                    </div>
-                  </div>
+                  )}
+                  <button
+                    onClick={() => setShowDetails(!showDetails)}
+                    className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-primary transition-colors self-center"
+                  >
+                    {showDetails ? 'Hide Details' : 'Show Details'}
+                  </button>
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -508,31 +520,39 @@ function IntroScreen({ onStart, user, sessionReport, onSignIn, onSignOut }) {
                 </div>
               )}
 
-              {/* Neural Stream Viz */}
-              <div className="w-full h-24 rounded-xl bg-vs-surface-low flex items-end justify-center overflow-hidden relative px-4 pb-3 pt-2">
-                <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(76,215,246,0.08) 0%, transparent 50%, rgba(194,216,248,0.06) 100%)' }} />
-                <div className="flex gap-1.5 items-end h-14">
-                  {[8, 10, 6, 9, 7, 11, 5, 10, 8, 12, 7, 9, 6, 11, 8].map((h, i) => (
-                    <div
-                      key={i}
-                      className="w-2 rounded-t-full"
-                      style={{
-                        height: `${h * 3.5}px`,
-                        background: i % 3 === 0 ? 'rgba(76,215,246,0.6)' : i % 3 === 1 ? 'rgba(76,215,246,0.4)' : 'rgba(194,216,248,0.4)',
-                      }}
-                    />
-                  ))}
-                </div>
-                <span className="absolute bottom-2 right-3 font-label text-[8px] text-vs-on-surface-variant uppercase tracking-widest">Live Neural Stream</span>
-              </div>
-
               {/* CTA */}
-              <button
-                onClick={onStart}
-                className="vs-btn-primary w-full py-5 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm"
-              >
-                Start Recovery Session
-              </button>
+              {workoutCompleted && sessionReport ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-center gap-2 py-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span className="font-label text-[10px] uppercase tracking-widest text-green-400">Workout Complete</span>
+                  </div>
+                  <a
+                    href="/dashboard"
+                    className="vs-btn-primary w-full py-5 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm text-center block"
+                  >
+                    View All Sessions
+                  </a>
+                </div>
+              ) : cameFromInsights ? (
+                // Came from insights — just show Back to Insights, no start button
+                <a
+                  href="/dashboard"
+                  className="vs-btn-primary w-full py-5 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm text-center block"
+                >
+                  Back to Insights
+                </a>
+              ) : (
+                // From extension or fresh home — start workout
+                <button
+                  onClick={onStart}
+                  className="vs-btn-primary w-full py-5 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm"
+                >
+                  Start Recovery Session
+                </button>
+              )}
             </div>
           </div>
 
@@ -645,7 +665,7 @@ function SessionScreen({ exercise, exerciseIndex, totalExercises, timeLeft, onPa
         </div>
 
         {/* Main Content Grid */}
-        <div className="relative w-full max-w-5xl grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 items-center">
+        <div className="relative w-full max-w-6xl grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 items-center">
           {/* Left: Timer + Target (desktop) */}
           <div className="hidden md:flex col-span-2 flex-col gap-8 items-center justify-center h-full">
             <div className="text-center">
@@ -661,18 +681,29 @@ function SessionScreen({ exercise, exerciseIndex, totalExercises, timeLeft, onPa
             </div>
           </div>
 
-          {/* Center: Exercise Image */}
-          <div className="col-span-1 md:col-span-8 relative rounded-2xl overflow-hidden synaptic-glow bg-vs-surface-mid border-t border-vs-primary/15" style={{ aspectRatio: '16/9' }}>
-            <img
-              src={exercise.image}
-              alt={exercise.name}
-              className="w-full h-full object-cover opacity-70 transition-opacity duration-700"
-              style={{ objectPosition: 'center top' }}
-            />
+          {/* Center: Exercise Media */}
+          <div className="col-span-1 md:col-span-8 relative rounded-2xl overflow-hidden synaptic-glow bg-vs-surface-mid border-t border-vs-primary/15" style={{ aspectRatio: '4/3', minHeight: '360px' }}>
+            {exercise.image.endsWith('.mp4') ? (
+              <video
+                key={exercise.image}
+                src={exercise.image}
+                className="w-full h-full object-contain"
+                autoPlay
+                loop
+                muted
+                playsInline
+              />
+            ) : (
+              <img
+                src={exercise.image}
+                alt={exercise.name}
+                className="w-full h-full object-contain opacity-90 transition-opacity duration-700"
+              />
+            )}
             <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #050505 0%, transparent 60%)' }} />
             <div className="absolute bottom-4 left-4 flex items-center gap-3 glass-panel px-4 py-2 rounded-full border border-vs-outline-variant/20">
               <span className="flex h-2 w-2 rounded-full bg-vs-primary animate-pulse" />
-              <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface">Tracking Synaptic Load</span>
+              <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface">Focus on form</span>
             </div>
           </div>
 
@@ -688,7 +719,7 @@ function SessionScreen({ exercise, exerciseIndex, totalExercises, timeLeft, onPa
             </div>
           </div>
 
-          {/* Right: Tips (desktop) */}
+          {/* Right: Tip (desktop) */}
           <div className="hidden md:flex col-span-2 flex-col gap-4">
             <div className="p-4 rounded-2xl bg-vs-surface-mid border-t border-vs-outline-variant/10">
               <div className="w-6 h-6 rounded-full bg-vs-tertiary/20 flex items-center justify-center mb-2">
@@ -697,14 +728,6 @@ function SessionScreen({ exercise, exerciseIndex, totalExercises, timeLeft, onPa
                 </svg>
               </div>
               <p className="font-body text-xs text-vs-on-surface-variant leading-relaxed">{exercise.tip}</p>
-            </div>
-            <div className="p-4 rounded-2xl bg-vs-surface-mid border-t border-vs-outline-variant/10">
-              <div className="w-6 h-6 rounded-full bg-vs-primary/20 flex items-center justify-center mb-2">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4CD7F6" strokeWidth="2">
-                  <circle cx="12" cy="12" r="3" /><path d="M6.3 6.3a8 8 0 0 0 0 11.4M17.7 6.3a8 8 0 0 1 0 11.4" />
-                </svg>
-              </div>
-              <p className="font-body text-xs text-vs-on-surface-variant leading-relaxed">{exercise.sensor}</p>
             </div>
           </div>
         </div>
@@ -786,7 +809,7 @@ function PausedScreen({ exercise, nextExercise, pausedSeconds, onResume, user, o
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="font-headline text-7xl md:text-8xl font-light tracking-tighter text-vs-on-surface timer-glow">
-                {formatTime(pausedSeconds)}
+                {remaining}
               </span>
             </div>
           </div>
@@ -796,7 +819,17 @@ function PausedScreen({ exercise, nextExercise, pausedSeconds, onResume, user, o
             <div className="w-full max-w-sm bg-vs-surface-mid rounded-2xl p-5 border border-vs-outline-variant/15 shadow-2xl">
               <div className="flex items-center gap-4 text-left">
                 <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-vs-surface-high flex-shrink-0">
-                  <img src={nextExercise.image} alt={nextExercise.name} className="w-full h-full object-cover opacity-80" />
+                  {nextExercise.image.endsWith('.mp4') ? (
+                    <video
+                      src={nextExercise.image}
+                      className="w-full h-full object-cover opacity-80"
+                      muted
+                      playsInline
+                      preload="metadata"
+                    />
+                  ) : (
+                    <img src={nextExercise.image} alt={nextExercise.name} className="w-full h-full object-cover opacity-80" />
+                  )}
                   <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(21,27,35,0.7), transparent)' }} />
                 </div>
                 <div className="flex-1">
@@ -826,20 +859,13 @@ function PausedScreen({ exercise, nextExercise, pausedSeconds, onResume, user, o
           </p>
         </div>
 
-        {/* Ambient tip */}
-        <div className="fixed bottom-8 right-6 hidden lg:block">
-          <div className="glass-panel px-4 py-3 rounded-full border border-vs-outline-variant/15 flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-vs-tertiary animate-pulse" />
-            <span className="font-label text-xs tracking-wide text-vs-on-surface-variant">Focus on your lower back during the next set</span>
-          </div>
-        </div>
       </main>
     </div>
   )
 }
 
 // ── Screen: COMPLETE ───────────────────────────────────────────────────────────
-function CompleteScreen({ sessionData, exercises = DEFAULT_EXERCISES, onReturn, userName, user, onSignOut }) {
+function CompleteScreen({ sessionData, exercises = DEFAULT_EXERCISES, onReturn, userName, user, onSignOut, isHistorical = false }) {
   const [phase, setPhase] = useState(0)
   // phase 0: quote only
   // phase 1: quote fades + session breakdown appears
@@ -919,15 +945,18 @@ function CompleteScreen({ sessionData, exercises = DEFAULT_EXERCISES, onReturn, 
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div>
                 <p className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant mb-1">Active Time</p>
-                <p className="font-headline text-2xl text-vs-primary">{sessionData?.activeTime || '15'}<span className="text-sm ml-0.5">m</span></p>
+                {sessionData?.activeTime != null
+                  ? <p className="font-headline text-2xl text-vs-primary">{sessionData.activeTime}<span className="text-sm ml-0.5">m</span></p>
+                  : <p className="font-headline text-2xl text-vs-primary">{Math.round((sessionData?.totalDurationSec || 0) / 60)}<span className="text-sm ml-0.5">m</span></p>
+                }
               </div>
               <div>
                 <p className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant mb-1">Exercises</p>
                 <p className="font-headline text-2xl text-vs-tertiary">{sessionData?.exerciseCount || exercises.length}<span className="text-sm ml-0.5">done</span></p>
               </div>
               <div>
-                <p className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant mb-1">Neural Load</p>
-                <p className="font-headline text-2xl text-vs-on-surface">Low</p>
+                <p className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant mb-1">Total Duration</p>
+                <p className="font-headline text-2xl text-vs-on-surface">{Math.round((sessionData?.totalDurationSec || exercises.reduce((s, e) => s + e.duration, 0)) / 60)}<span className="text-sm ml-0.5">m</span></p>
               </div>
             </div>
 
@@ -947,18 +976,29 @@ function CompleteScreen({ sessionData, exercises = DEFAULT_EXERCISES, onReturn, 
             </div>
 
             <div className="border-t border-vs-outline-variant/10 pt-5 mt-4 flex flex-col gap-3">
-              <button
-                onClick={onReturn}
-                className="w-full font-body text-sm text-vs-primary hover:text-vs-on-surface transition-colors uppercase tracking-widest"
-              >
-                Return to Home
-              </button>
-              <a
-                href="/dashboard"
-                className="w-full font-body text-sm text-vs-on-surface-variant hover:text-vs-primary transition-colors uppercase tracking-widest text-center"
-              >
-                View All Sessions
-              </a>
+              {isHistorical ? (
+                <a
+                  href="/dashboard"
+                  className="w-full font-body text-sm text-vs-primary hover:text-vs-on-surface transition-colors uppercase tracking-widest text-center"
+                >
+                  Back to Insights
+                </a>
+              ) : (
+                <>
+                  <button
+                    onClick={onReturn}
+                    className="w-full font-body text-sm text-vs-primary hover:text-vs-on-surface transition-colors uppercase tracking-widest"
+                  >
+                    Return to Home
+                  </button>
+                  <a
+                    href="/dashboard"
+                    className="w-full font-body text-sm text-vs-on-surface-variant hover:text-vs-primary transition-colors uppercase tracking-widest text-center"
+                  >
+                    View All Sessions
+                  </a>
+                </>
+              )}
             </div>
           </div>
 
@@ -985,7 +1025,9 @@ export default function App() {
   const [sessionError, setSessionError] = useState(null)
   const [pendingSessionId, setPendingSessionId] = useState(null)
   const [workoutSaved, setWorkoutSaved] = useState(false)
+  const [workoutCompleted, setWorkoutCompleted] = useState(false)
   const supabaseRef = useRef(null)
+  const workoutStartTimeRef = useRef(null) // Set when session actually begins
 
   // ── Adaptive Exercises ──
   const exercises = useMemo(() => selectExercises(sessionReport), [sessionReport])
@@ -1034,6 +1076,10 @@ export default function App() {
           if (response.ok && data.session) {
             setSessionReport(data.session)
             setSessionError(null)
+            if (data.session.metrics?.workout_data) {
+              setWorkoutCompleted(true)
+              setScreen('complete') // Show completion screen directly for completed sessions
+            }
           } else if (data.ownerMismatch) {
             setSessionError('This session belongs to a different account. Please sign in with the account you used in the extension.')
           } else if (data.requiresAuth) {
@@ -1050,6 +1096,7 @@ export default function App() {
             const { sessions } = await response.json()
             if (sessions && sessions.length > 0) {
               setSessionReport(sessions[0])
+              if (sessions[0].metrics?.workout_data) setWorkoutCompleted(true)
             }
           }
         }
@@ -1103,6 +1150,7 @@ export default function App() {
       setCurrentExerciseIndex(nextIdx)
       setTimeLeft(exercises[nextIdx].duration)
     } else {
+      setWorkoutCompleted(true)
       setScreen('complete')
     }
   }, [timeLeft, screen, currentExerciseIndex, exercises])
@@ -1157,6 +1205,7 @@ export default function App() {
   }, [])
 
   const handleCountdownComplete = useCallback(() => {
+    workoutStartTimeRef.current = Date.now()
     setCurrentExerciseIndex(0)
     setTimeLeft(exercises[0].duration)
     setScreen('session')
@@ -1177,6 +1226,7 @@ export default function App() {
       setCurrentExerciseIndex(nextIdx)
       setTimeLeft(exercises[nextIdx].duration)
     } else {
+      setWorkoutCompleted(true)
       setScreen('complete')
     }
   }, [currentExerciseIndex, exercises])
@@ -1197,8 +1247,11 @@ export default function App() {
   }, [exercises])
 
   const sessionData = {
-    activeTime: Math.round((Date.now() - sessionStartTime) / 60000),
+    activeTime: workoutStartTimeRef.current
+      ? Math.max(1, Math.round((Date.now() - workoutStartTimeRef.current) / 60000))
+      : null,
     exerciseCount: exercises.length,
+    totalDurationSec: exercises.reduce((sum, ex) => sum + ex.duration, 0),
   }
 
   // ── Render ──
@@ -1247,7 +1300,7 @@ export default function App() {
   return (
     <>
       {screen === 'intro' && (
-        <IntroScreen onStart={handleStart} user={user} sessionReport={sessionReport} onSignIn={handleSignIn} onSignOut={handleSignOut} />
+        <IntroScreen onStart={handleStart} user={user} sessionReport={sessionReport} workoutCompleted={workoutCompleted} onSignIn={handleSignIn} onSignOut={handleSignOut} />
       )}
       {screen === 'countdown' && (
         <CountdownScreen onComplete={handleCountdownComplete} />
@@ -1278,11 +1331,14 @@ export default function App() {
       {screen === 'complete' && (
         <CompleteScreen
           sessionData={sessionData}
-          exercises={exercises}
+          exercises={sessionReport?.metrics?.workout_data?.exercises?.length
+            ? sessionReport.metrics.workout_data.exercises
+            : exercises}
           onReturn={handleReturn}
           userName={userName}
           user={user}
           onSignOut={handleSignOut}
+          isHistorical={!!sessionReport?.metrics?.workout_data && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('from') === 'insights'}
         />
       )}
     </>
