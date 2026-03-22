@@ -1,7 +1,17 @@
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { createServerSupabaseClient } from '@/lib/supabase'
 
 // ── PostureGuard Landing Page ─────────────────────────────────────────────────
-export default function LandingPage() {
+export default async function LandingPage() {
+  const cookieStore = await cookies()
+  const supabase = createServerSupabaseClient(cookieStore)
+  const { data: { session } } = await supabase.auth.getSession()
+
+  // Logged-in users go straight to the app — landing page is for new visitors only
+  if (session) redirect('/flow')
+
   return (
     <div className="bg-[#131313] text-[#e5e2e1] font-body min-h-screen">
 
@@ -12,8 +22,8 @@ export default function LandingPage() {
             PostureGuard
           </div>
           <div className="hidden md:flex items-center space-x-12">
-            <Link className="font-headline tracking-tight uppercase text-xs font-bold text-[#c3f5ff] border-b-2 border-[#c3f5ff] pb-1" href="/flow">Flow</Link>
-            <Link className="font-headline tracking-tight uppercase text-xs font-bold text-[#e5e2e1]/70 hover:text-[#c3f5ff] transition-colors" href="/dashboard">Insights</Link>
+            <Link className="font-headline tracking-tight uppercase text-xs font-bold text-[#e5e2e1]/70 hover:text-[#c3f5ff] transition-colors" href="/blog/1">Blog</Link>
+            <Link className="font-headline tracking-tight uppercase text-xs font-bold text-[#e5e2e1]/70 hover:text-[#c3f5ff] transition-colors" href="/blog/2">Research</Link>
           </div>
           <Link href="/login">
             <button className="bg-[#c3f5ff] text-[#00363d] px-6 py-2 rounded-full font-headline text-xs font-bold uppercase tracking-widest hover:bg-[#00daf3] transition-all active:scale-95 shadow-[0_0_20px_rgba(195,245,255,0.2)]">
@@ -53,7 +63,7 @@ export default function LandingPage() {
 
             <div className="flex flex-col gap-4">
               <div className="flex flex-col sm:flex-row gap-4 items-start">
-                <Link href="/flow">
+                <Link href="/login">
                   <button className="bg-[#c3f5ff] text-[#00363d] px-12 py-4 rounded-full font-headline text-sm font-bold uppercase tracking-widest hover:shadow-[0_0_30px_rgba(195,245,255,0.3)] transition-all">
                     Get Started
                   </button>
@@ -201,7 +211,7 @@ export default function LandingPage() {
               <h3 className="font-headline text-xl font-bold text-[#e5e2e1] mb-3 uppercase tracking-tight">Real-Time Detection</h3>
               <p className="font-body text-[#bac9cc] text-sm font-light leading-relaxed">Detects slouching via your webcam in real time.</p>
               <div className="mt-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Link href="/flow" className="text-[#66d9cc] font-headline text-[10px] uppercase tracking-widest hover:underline underline-offset-4">Initialize Scan →</Link>
+                <Link href="/login" className="text-[#66d9cc] font-headline text-[10px] uppercase tracking-widest hover:underline underline-offset-4">Get Started →</Link>
               </div>
             </div>
 
@@ -221,7 +231,7 @@ export default function LandingPage() {
               <h3 className="font-headline text-xl font-bold text-[#e5e2e1] mb-3 uppercase tracking-tight">AI Coaching</h3>
               <p className="font-body text-[#bac9cc] text-sm font-light leading-relaxed">Get gentle AI-powered reminders to fix your sitting position.</p>
               <div className="mt-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Link href="/flow" className="text-[#c3f5ff] font-headline text-[10px] uppercase tracking-widest hover:underline underline-offset-4">Access Core →</Link>
+                <Link href="/login" className="text-[#c3f5ff] font-headline text-[10px] uppercase tracking-widest hover:underline underline-offset-4">Get Started →</Link>
               </div>
             </div>
 
@@ -243,7 +253,7 @@ export default function LandingPage() {
               <h3 className="font-headline text-xl font-bold text-[#e5e2e1] mb-3 uppercase tracking-tight">Recovery Sessions</h3>
               <p className="font-body text-[#bac9cc] text-sm font-light leading-relaxed">Access guided stretches to reverse the effects of sitting.</p>
               <div className="mt-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Link href="/flow" className="text-[#c3f5ff] font-headline text-[10px] uppercase tracking-widest hover:underline underline-offset-4">Load Session →</Link>
+                <Link href="/login" className="text-[#c3f5ff] font-headline text-[10px] uppercase tracking-widest hover:underline underline-offset-4">Get Started →</Link>
               </div>
             </div>
           </div>
@@ -256,7 +266,7 @@ export default function LandingPage() {
             <p className="font-body text-[#bac9cc] text-lg mb-12 max-w-xl mx-auto font-light leading-relaxed">
               Be among the first to fix your posture for good.
             </p>
-            <Link href="/flow">
+            <Link href="/login">
               <button className="bg-[#c3f5ff] text-[#00363d] px-16 py-5 rounded-full font-headline text-base font-bold uppercase tracking-widest hover:shadow-[0_0_40px_rgba(195,245,255,0.4)] transition-all transform hover:-translate-y-1">
                 Get Started
               </button>
@@ -272,11 +282,11 @@ export default function LandingPage() {
             POSTUREGUARD
           </div>
           <div className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/50 mb-4 md:mb-0">
-            © 2026 POSTUREGUARD. PRECISION BIOMETRICS.
+            © 2026 POSTUREGUARD.
           </div>
           <div className="flex space-x-8">
-            <a className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/40 hover:text-[#c3f5ff] transition-colors" href="#">Privacy</a>
-            <a className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/40 hover:text-[#c3f5ff] transition-colors" href="#">Terms</a>
+            <Link className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/40 hover:text-[#c3f5ff] transition-colors" href="/blog/1">Blog</Link>
+            <Link className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/40 hover:text-[#c3f5ff] transition-colors" href="/blog/2">Research</Link>
           </div>
         </div>
       </footer>
