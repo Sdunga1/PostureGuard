@@ -535,6 +535,15 @@
     togglePreview();
   });
 
+  window.addEventListener('posture:set-preview', (e) => {
+    const shouldShow = e.detail.enabled;
+    if (shouldShow && !previewVisible) {
+      togglePreview(); // show it
+    } else if (!shouldShow && previewVisible) {
+      togglePreview(); // hide it
+    }
+  });
+
   // Check if this tab should start the camera
   // Only one tab runs the camera — ask background first
   chrome.storage.local.get(['postureEnabled'], async (result) => {

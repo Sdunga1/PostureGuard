@@ -474,7 +474,7 @@
       const debugOn = e.target.checked;
       await saveSetting('debugMode', debugOn);
       // Toggle camera preview
-      await sendToActiveTab({ type: 'TOGGLE_PREVIEW' });
+      await sendToActiveTab({ type: 'SET_PREVIEW', enabled: debugOn });
     });
   }
 
@@ -630,17 +630,120 @@
     });
   }
 
+  // ─── Report Loading Animation Helpers ───────────────────────
+  function createReportLoading() {
+    const html = `
+      <div class="report-loading" id="report-loading">
+        <div class="report-loading-top">
+          <div class="silhouette-container" id="silhouette">
+            <svg class="silhouette-svg" viewBox="0 0 80 100">
+              <!-- Body fill -->
+              <ellipse class="body-fill" cx="40" cy="22" rx="14" ry="16"/>
+              <path class="body-fill" d="M20,45 Q20,35 40,35 Q60,35 60,45 L58,75 Q58,80 40,80 Q22,80 22,75 Z"/>
+              <!-- Body outline -->
+              <ellipse class="body-outline" cx="40" cy="22" rx="14" ry="16"/>
+              <path class="body-outline" d="M20,45 Q20,35 40,35 Q60,35 60,45 L58,75 Q58,80 40,80 Q22,80 22,75 Z"/>
+              <!-- Shoulders -->
+              <line class="body-outline" x1="8" y1="48" x2="20" y2="42"/>
+              <line class="body-outline" x1="72" y1="48" x2="60" y2="42"/>
+              <!-- Arms -->
+              <line class="body-outline" x1="8" y1="48" x2="12" y2="72"/>
+              <line class="body-outline" x1="72" y1="48" x2="68" y2="72"/>
+              <!-- Spine hint -->
+              <line class="body-outline" x1="40" y1="38" x2="40" y2="75" style="opacity:0.15"/>
+            </svg>
+            <div class="scan-line"></div>
+          </div>
+        </div>
+        <div class="report-steps">
+          <div class="report-steps-fill" id="steps-fill"></div>
+          <div class="report-step" id="step-1">
+            <div class="step-circle">1</div>
+            <span class="step-label">Collecting session metrics</span>
+          </div>
+          <div class="report-step" id="step-2">
+            <div class="step-circle">2</div>
+            <span class="step-label">Analyzing posture patterns</span>
+          </div>
+          <div class="report-step" id="step-3">
+            <div class="step-circle">3</div>
+            <span class="step-label">Generating AI recommendations</span>
+          </div>
+          <div class="report-step" id="step-4">
+            <div class="step-circle">4</div>
+            <span class="step-label">Building your report</span>
+          </div>
+        </div>
+      </div>`;
+    return html;
+  }
+
+  function advanceStep(stepNum, totalSteps) {
+    // Mark previous steps as done
+    for (let i = 1; i < stepNum; i++) {
+      const el = document.getElementById('step-' + i);
+      if (el) {
+        el.classList.remove('active');
+        el.classList.add('done');
+        el.querySelector('.step-circle').textContent = '✓';
+      }
+    }
+    // Mark current step as active
+    const current = document.getElementById('step-' + stepNum);
+    if (current) {
+      current.classList.add('active');
+    }
+    // Update fill line height
+    const fill = document.getElementById('steps-fill');
+    if (fill) {
+      const pct = ((stepNum - 1) / (totalSteps - 1)) * 100;
+      fill.style.height = pct + '%';
+    }
+    // Change silhouette color on last step
+    if (stepNum === totalSteps) {
+      const sil = document.getElementById('silhouette');
+      if (sil) sil.classList.add('scan-done');
+    }
+  }
+
+  function completeAllSteps(totalSteps) {
+    for (let i = 1; i <= totalSteps; i++) {
+      const el = document.getElementById('step-' + i);
+      if (el) {
+        el.classList.remove('active');
+        el.classList.add('done');
+        el.querySelector('.step-circle').textContent = '✓';
+      }
+    }
+    const fill = document.getElementById('steps-fill');
+    if (fill) fill.style.height = '100%';
+    const sil = document.getElementById('silhouette');
+    if (sil) sil.classList.add('scan-done');
+  }
+
   if (els.reportBtn) {
     els.reportBtn.addEventListener('click', async () => {
-      els.reportBtn.textContent = 'Generating...';
-      els.reportBtn.disabled = true;
+      // Replace button with loading animation
+      const sessionSection = els.reportBtn.parentElement;
+      const originalContent = els.reportBtn.outerHTML;
+      els.reportBtn.style.display = 'none';
+      sessionSection.insertAdjacentHTML('beforeend', createReportLoading());
+
+      const TOTAL_STEPS = 4;
 
       try {
-        // Get session data from background (global session, not tab-specific)
+        // Step 1: Collect metrics
+        advanceStep(1, TOTAL_STEPS);
         const sessionResponse = await chrome.runtime.sendMessage({ type: 'GET_SESSION_DATA' });
 
         if (sessionResponse && sessionResponse.ok) {
-          // Request Claude analysis via background
+          // Step 2: Analyze patterns
+          await new Promise(r => setTimeout(r, 600));
+          advanceStep(2, TOTAL_STEPS);
+
+          // Step 3: AI recommendations
+          await new Promise(r => setTimeout(r, 500));
+          advanceStep(3, TOTAL_STEPS);
           const result = await chrome.runtime.sendMessage({
             type: 'GENERATE_REPORT',
             sessionData: sessionResponse.data
@@ -649,6 +752,12 @@
           if (result && result.analysis) {
             sessionResponse.data.claudeAnalysis = result.analysis;
           }
+
+          // Step 4: Build report
+          advanceStep(4, TOTAL_STEPS);
+          await new Promise(r => setTimeout(r, 400));
+          completeAllSteps(TOTAL_STEPS);
+          await new Promise(r => setTimeout(r, 600));
 
           // Save session to cloud if logged in (reuse auto-saved URL if available)
           let sessionUrl = null;
@@ -722,6 +831,10 @@
       } catch (err) {
         console.error('[PostureGuard] Report generation failed:', err);
       } finally {
+        // Remove loading animation, restore button
+        const loadingEl = document.getElementById('report-loading');
+        if (loadingEl) loadingEl.remove();
+        els.reportBtn.style.display = '';
         els.reportBtn.textContent = 'Generate Report';
         els.reportBtn.disabled = false;
       }
