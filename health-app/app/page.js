@@ -22,8 +22,8 @@ export default async function LandingPage() {
             PostureGuard
           </div>
           <div className="hidden md:flex items-center space-x-12">
-            <Link className="font-headline tracking-tight uppercase text-xs font-bold text-[#e5e2e1]/70 hover:text-[#c3f5ff] transition-colors" href="/blog/1">Blog</Link>
-            <Link className="font-headline tracking-tight uppercase text-xs font-bold text-[#e5e2e1]/70 hover:text-[#c3f5ff] transition-colors" href="/blog/2">Research</Link>
+            <Link className="font-headline tracking-tight uppercase text-xs font-bold text-[#c3f5ff] border-b-2 border-[#c3f5ff] pb-1" href="/flow">Flow</Link>
+            <Link className="font-headline tracking-tight uppercase text-xs font-bold text-[#e5e2e1]/70 hover:text-[#c3f5ff] transition-colors" href="/dashboard">Insights</Link>
           </div>
           <Link href="/login">
             <button className="bg-[#c3f5ff] text-[#00363d] px-6 py-2 rounded-full font-headline text-xs font-bold uppercase tracking-widest hover:bg-[#00daf3] transition-all active:scale-95 shadow-[0_0_20px_rgba(195,245,255,0.2)]">
@@ -43,6 +43,7 @@ export default async function LandingPage() {
 
           {/* Left: Content */}
           <div className="lg:col-span-6 z-10">
+            {/* Status badge */}
             <div className="inline-flex items-center space-x-3 mb-6 bg-[#c3f5ff]/5 border border-[#c3f5ff]/10 px-4 py-1.5 rounded-full">
               <span className="w-2 h-2 rounded-full bg-[#66d9cc] animate-pulse-soft" />
               <span className="font-headline text-[10px] uppercase tracking-[0.2em] text-[#c3f5ff]">System Status: Optimal</span>
@@ -80,8 +81,10 @@ export default async function LandingPage() {
           {/* Right: Spine HUD */}
           <div className="lg:col-span-6 relative flex justify-center items-center lg:pr-12">
             <div className="relative w-full max-w-lg aspect-square flex items-center justify-center">
+              {/* Rotating ring */}
               <div className="absolute inset-12 border-[0.5px] border-[#c3f5ff]/5 rounded-full border-dashed animate-spin-slow" />
 
+              {/* SVG Spine */}
               <svg className="w-80 h-auto drop-shadow-[0_0_20px_rgba(195,245,255,0.2)]" viewBox="0 0 200 400">
                 <defs>
                   <linearGradient id="vertebraGradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -91,38 +94,48 @@ export default async function LandingPage() {
                   </linearGradient>
                 </defs>
                 <g>
+                  {/* Spine line */}
                   <line x1="100" y1="20" x2="100" y2="270" stroke="rgba(195,245,255,0.1)" strokeWidth="0.5" />
+                  {/* Cervical C1 */}
                   <g className="vertebra-anim" style={{ animationDelay: '0.1s' }}>
                     <rect x="73" y="20" width="54" height="12" rx="3" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="1" />
-                    <ellipse cx="100" cy="35" rx="18" ry="1.5" fill="#c3f5ff" style={{ animationDelay: '0s', transformOrigin: 'center' }} />
+                    <ellipse cx="100" cy="35" rx="18" ry="1.5" fill="#c3f5ff" className="animate-disc-pulse" style={{ animationDelay: '0s', transformOrigin: 'center' }} />
                   </g>
+                  {/* Cervical C2 */}
                   <g className="vertebra-anim" style={{ animationDelay: '0.2s' }}>
                     <rect x="70" y="38" width="60" height="14" rx="3" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="1" />
-                    <ellipse cx="100" cy="55" rx="22" ry="1.5" fill="#c3f5ff" style={{ animationDelay: '0.1s', transformOrigin: 'center' }} />
+                    <ellipse cx="100" cy="55" rx="22" ry="1.5" fill="#c3f5ff" className="animate-disc-pulse" style={{ animationDelay: '0.1s', transformOrigin: 'center' }} />
                   </g>
+                  {/* Cervical C3 */}
                   <g className="vertebra-anim" style={{ animationDelay: '0.3s' }}>
                     <rect x="67" y="58" width="66" height="16" rx="4" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="1" />
-                    <ellipse cx="100" cy="78" rx="26" ry="1.5" fill="#c3f5ff" style={{ animationDelay: '0.2s', transformOrigin: 'center' }} />
+                    <ellipse cx="100" cy="78" rx="26" ry="1.5" fill="#c3f5ff" className="animate-disc-pulse" style={{ animationDelay: '0.2s', transformOrigin: 'center' }} />
                   </g>
+                  {/* Thoracic T1 */}
                   <g className="vertebra-anim" style={{ animationDelay: '0.4s' }}>
                     <rect x="63" y="82" width="74" height="20" rx="4" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="1" />
-                    <ellipse cx="100" cy="105" rx="30" ry="2" fill="#c3f5ff" style={{ animationDelay: '0.3s', transformOrigin: 'center' }} />
+                    <ellipse cx="100" cy="105" rx="30" ry="2" fill="#c3f5ff" className="animate-disc-pulse" style={{ animationDelay: '0.3s', transformOrigin: 'center' }} />
                   </g>
+                  {/* Thoracic T2 */}
                   <g className="vertebra-anim" style={{ animationDelay: '0.5s' }}>
                     <rect x="59" y="110" width="82" height="24" rx="5" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="1" />
-                    <ellipse cx="100" cy="138" rx="34" ry="2" fill="#c3f5ff" style={{ animationDelay: '0.4s', transformOrigin: 'center' }} />
+                    <ellipse cx="100" cy="138" rx="34" ry="2" fill="#c3f5ff" className="animate-disc-pulse" style={{ animationDelay: '0.4s', transformOrigin: 'center' }} />
                   </g>
+                  {/* Lumbar L1 */}
                   <g className="vertebra-anim" style={{ animationDelay: '0.6s' }}>
                     <rect x="55" y="145" width="90" height="28" rx="5" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="1" />
-                    <ellipse cx="100" cy="178" rx="38" ry="2.5" fill="#c3f5ff" style={{ animationDelay: '0.5s', transformOrigin: 'center' }} />
+                    <ellipse cx="100" cy="178" rx="38" ry="2.5" fill="#c3f5ff" className="animate-disc-pulse" style={{ animationDelay: '0.5s', transformOrigin: 'center' }} />
                   </g>
+                  {/* Lumbar L2 */}
                   <g className="vertebra-anim" style={{ animationDelay: '0.7s' }}>
                     <rect x="50" y="185" width="100" height="32" rx="6" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="1" />
-                    <ellipse cx="100" cy="222" rx="42" ry="3" fill="#c3f5ff" style={{ animationDelay: '0.6s', transformOrigin: 'center' }} />
+                    <ellipse cx="100" cy="222" rx="42" ry="3" fill="#c3f5ff" className="animate-disc-pulse" style={{ animationDelay: '0.6s', transformOrigin: 'center' }} />
                   </g>
+                  {/* Sacral */}
                   <g className="vertebra-anim" style={{ animationDelay: '0.8s' }}>
                     <rect x="45" y="230" width="110" height="38" rx="6" fill="url(#vertebraGradient)" stroke="#c3f5ff" strokeWidth="1" />
                   </g>
+                  {/* HUD Connectors */}
                   <path d="M127 26 L165 26" fill="none" stroke="#c3f5ff" strokeDasharray="2 2" strokeWidth="0.5" />
                   <circle cx="127" cy="26" r="1.5" fill="#c3f5ff" />
                   <path d="M150 201 L180 201" fill="none" stroke="#c3f5ff" strokeDasharray="2 2" strokeWidth="0.5" />
@@ -134,16 +147,20 @@ export default async function LandingPage() {
                 </g>
               </svg>
 
+              {/* Readout: CERVICAL */}
               <div className="absolute top-16 right-4 font-headline text-[10px] tracking-widest text-[#c3f5ff] bg-[#131313]/80 backdrop-blur px-3 py-1 border-l-2 border-[#c3f5ff] shadow-[0_0_15px_rgba(195,245,255,0.1)]">
                 CERVICAL ●──── 94%
               </div>
+              {/* Readout: LUMBAR */}
               <div className="absolute bottom-48 right-0 font-headline text-[10px] tracking-widest text-[#983c1e] bg-[#ffc3b1]/10 backdrop-blur px-3 py-1 border-l-2 border-[#983c1e] shadow-[0_0_15px_rgba(152,60,30,0.2)]">
                 LUMBAR ●──── 72% <span className="text-xs font-bold">⚠</span>
               </div>
+              {/* Readout: SACRAL */}
               <div className="absolute bottom-32 right-0 font-headline text-[10px] tracking-widest text-[#66d9cc] bg-[#66d9cc]/10 backdrop-blur px-3 py-1 border-l-2 border-[#66d9cc] shadow-[0_0_15px_rgba(102,217,204,0.1)]">
                 SACRAL ●──── 88%
               </div>
 
+              {/* Ambient glow */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-96 bg-[#c3f5ff]/10 blur-[80px] rounded-full -z-10" />
             </div>
           </div>
@@ -167,18 +184,18 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        {/* ── HOW IT WORKS ── */}
+        {/* ── THE WORKFLOW ── */}
         <section id="workflow" className="max-w-screen-2xl mx-auto px-8 md:px-16 py-32">
           <div className="text-center mb-24">
-            <h2 className="font-headline text-sm uppercase tracking-[0.4em] text-[#c3f5ff]/60 font-bold mb-4">How it works</h2>
+            <h2 className="font-headline text-sm uppercase tracking-[0.4em] text-[#c3f5ff]/60 font-bold mb-4">The Workflow</h2>
             <div className="w-12 h-px bg-[#c3f5ff]/30 mx-auto" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[
-              { n: '01', title: 'Install Extension', body: 'No hardware required. PostureGuard runs entirely in your browser. Local processing ensures your camera never leaves your machine.' },
-              { n: '02', title: 'Calibrate Once', body: "Sit how you naturally should for 30 seconds. That's your baseline — everything is measured against you, not a generic standard." },
-              { n: '03', title: 'Work Normally', body: 'The extension watches your posture in the background and nudges you when you drift. No interruptions unless you need one.' },
-              { n: '04', title: 'Recover with Purpose', body: 'End your session, get an AI report of exactly what went wrong, and a set of exercises picked for your specific problem areas.' },
+              { n: '01', title: 'Install Extension', body: 'No hardware required. PostureGuard runs entirely in your browser. Local processing ensures privacy.' },
+              { n: '02', title: 'Calibrate Baseline', body: 'Sit in your optimal position for 30 seconds. This creates a personalized biometric profile.' },
+              { n: '03', title: 'Passive Monitor', body: 'Work as normal. Receive subtle HUD-style nudges when the system detects spinal deviation.' },
+              { n: '04', title: 'Analyze & Heal', body: "Get AI-driven insights into your sitting habits and specialized recovery routines at the day's end." },
             ].map(({ n, title, body }) => (
               <div key={n} className="group relative bg-[#0e0e0e] border border-white/5 p-8 transition-all hover:border-[#c3f5ff]/30 hover:bg-[#1c1b1b] cursor-default">
                 <div className="font-headline text-6xl font-bold text-[#c3f5ff]/10 mb-6 group-hover:text-[#c3f5ff]/20 transition-colors">{n}</div>
@@ -196,11 +213,12 @@ export default async function LandingPage() {
             <div className="w-12 h-px bg-[#c3f5ff]/30 mx-auto" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Card 1 */}
             <div className="group relative bg-[#1c1b1b] p-8 border-l-2 border-[#66d9cc] transition-all hover:bg-[#2a2a2a] cursor-default">
               <div className="flex justify-between items-start mb-12">
                 <div className="bg-[#66d9cc]/10 p-3 rounded-lg">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M9.5 14.5L3 21M3 3v5l2 2M21 3h-5l-2 2M21 21l-6-6m0 0l-1.5-1.5M15 15l1.5 1.5M9 9l1.5 1.5M9 9l6-6M9 9L3 15" stroke="#66d9cc" strokeWidth="1.5" strokeLinecap="round" />
+                    <path d="M9.5 14.5L3 21M3 3v5l2 2M21 3h-5l-2 2M21 21l-6-6m0 0l-1.5-1.5M15 15l1.5 1.5M9 9l1.5 1.5M9 9l6-6M9 9L3 15" stroke="#66d9cc" strokeWidth="1.5" strokeLinecap="round" fill="none" />
                   </svg>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -211,10 +229,10 @@ export default async function LandingPage() {
               <h3 className="font-headline text-xl font-bold text-[#e5e2e1] mb-3 uppercase tracking-tight">Real-Time Detection</h3>
               <p className="font-body text-[#bac9cc] text-sm font-light leading-relaxed">Detects slouching via your webcam in real time.</p>
               <div className="mt-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Link href="/login" className="text-[#66d9cc] font-headline text-[10px] uppercase tracking-widest hover:underline underline-offset-4">Get Started →</Link>
+                <Link href="/login" className="text-[#66d9cc] font-headline text-[10px] uppercase tracking-widest hover:underline underline-offset-4">Initialize Scan →</Link>
               </div>
             </div>
-
+            {/* Card 2 */}
             <div className="group relative bg-[#1c1b1b] p-8 border-l-2 border-[#c3f5ff] transition-all hover:bg-[#2a2a2a] cursor-default">
               <div className="flex justify-between items-start mb-12">
                 <div className="bg-[#c3f5ff]/10 p-3 rounded-lg">
@@ -231,10 +249,10 @@ export default async function LandingPage() {
               <h3 className="font-headline text-xl font-bold text-[#e5e2e1] mb-3 uppercase tracking-tight">AI Coaching</h3>
               <p className="font-body text-[#bac9cc] text-sm font-light leading-relaxed">Get gentle AI-powered reminders to fix your sitting position.</p>
               <div className="mt-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Link href="/login" className="text-[#c3f5ff] font-headline text-[10px] uppercase tracking-widest hover:underline underline-offset-4">Get Started →</Link>
+                <Link href="/login" className="text-[#c3f5ff] font-headline text-[10px] uppercase tracking-widest hover:underline underline-offset-4">Access Core →</Link>
               </div>
             </div>
-
+            {/* Card 3 */}
             <div className="group relative bg-[#1c1b1b] p-8 border-l-2 border-[#c3f5ff] transition-all hover:bg-[#2a2a2a] cursor-default">
               <div className="flex justify-between items-start mb-12">
                 <div className="bg-[#c3f5ff]/10 p-3 rounded-lg">
@@ -253,7 +271,7 @@ export default async function LandingPage() {
               <h3 className="font-headline text-xl font-bold text-[#e5e2e1] mb-3 uppercase tracking-tight">Recovery Sessions</h3>
               <p className="font-body text-[#bac9cc] text-sm font-light leading-relaxed">Access guided stretches to reverse the effects of sitting.</p>
               <div className="mt-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Link href="/login" className="text-[#c3f5ff] font-headline text-[10px] uppercase tracking-widest hover:underline underline-offset-4">Get Started →</Link>
+                <Link href="/login" className="text-[#c3f5ff] font-headline text-[10px] uppercase tracking-widest hover:underline underline-offset-4">Load Session →</Link>
               </div>
             </div>
           </div>
@@ -282,11 +300,12 @@ export default async function LandingPage() {
             POSTUREGUARD
           </div>
           <div className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/50 mb-4 md:mb-0">
-            © 2026 POSTUREGUARD.
+            © 2026 POSTUREGUARD. PRECISION BIOMETRICS.
           </div>
           <div className="flex space-x-8">
-            <Link className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/40 hover:text-[#c3f5ff] transition-colors" href="/blog/1">Blog</Link>
-            <Link className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/40 hover:text-[#c3f5ff] transition-colors" href="/blog/2">Research</Link>
+            <a className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/40 hover:text-[#c3f5ff] transition-colors" href="#">Privacy Protocol</a>
+            <a className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/40 hover:text-[#c3f5ff] transition-colors" href="#">Neural Terms</a>
+            <a className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/40 hover:text-[#c3f5ff] transition-colors" href="#">System Status</a>
           </div>
         </div>
       </footer>
