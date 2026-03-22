@@ -32,7 +32,7 @@ const EXERCISE_POOL = [
     duration: 90,
     target: '10 Reps',
     tip: 'Gently tilt head side to side, hold each position for 3 seconds.',
-    image: '/exercises/neck-stretches.webp',
+    image: '/exercises/neck_stretch.mp4',
     issues: ['lateral_tilt', 'forward_head'],
   },
   {
@@ -42,7 +42,7 @@ const EXERCISE_POOL = [
     duration: 150,
     target: '12 Reps',
     tip: 'Extend spine tall, squeeze shoulder blades together firmly.',
-    image: '/exercises/back-extensions.webp',
+    image: '/exercises/back-stretch.mp4',
     issues: ['slouch', 'forward_head'],
   },
   {
@@ -52,7 +52,7 @@ const EXERCISE_POOL = [
     duration: 120,
     target: '30s each side',
     tip: 'Lunge forward and press hips downward, feeling the stretch through hip flexors.',
-    image: '/exercises/hip-flexor-stretch.webp',
+    image: '/exercises/hip_stretch.mp4',
     issues: ['slouch'],
   },
   {
@@ -62,7 +62,7 @@ const EXERCISE_POOL = [
     duration: 90,
     target: '15 Reps',
     tip: 'Squeeze shoulder blades together, hold for 3 seconds, then release.',
-    image: '/exercises/shoulder-blade-squeeze.webp',
+    image: '/exercises/shoulder_sqeeze.mp4',
     issues: ['shoulder_asymmetry', 'slouch'],
   },
   {
@@ -681,13 +681,25 @@ function SessionScreen({ exercise, exerciseIndex, totalExercises, timeLeft, onPa
             </div>
           </div>
 
-          {/* Center: Exercise Image */}
+          {/* Center: Exercise Media */}
           <div className="col-span-1 md:col-span-8 relative rounded-2xl overflow-hidden synaptic-glow bg-vs-surface-mid border-t border-vs-primary/15" style={{ aspectRatio: '4/3', minHeight: '360px' }}>
-            <img
-              src={exercise.image}
-              alt={exercise.name}
-              className="w-full h-full object-contain opacity-90 transition-opacity duration-700"
-            />
+            {exercise.image.endsWith('.mp4') ? (
+              <video
+                key={exercise.image}
+                src={exercise.image}
+                className="w-full h-full object-contain"
+                autoPlay
+                loop
+                muted
+                playsInline
+              />
+            ) : (
+              <img
+                src={exercise.image}
+                alt={exercise.name}
+                className="w-full h-full object-contain opacity-90 transition-opacity duration-700"
+              />
+            )}
             <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #050505 0%, transparent 60%)' }} />
             <div className="absolute bottom-4 left-4 flex items-center gap-3 glass-panel px-4 py-2 rounded-full border border-vs-outline-variant/20">
               <span className="flex h-2 w-2 rounded-full bg-vs-primary animate-pulse" />
