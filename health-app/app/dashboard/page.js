@@ -74,6 +74,7 @@ export default function Dashboard() {
     if (!supabase) return
     await supabase.auth.signOut()
     setUser(null)
+    window.location.href = '/'
   }
 
   // Not authenticated

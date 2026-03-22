@@ -1123,6 +1123,7 @@ export default function App() {
     if (!supabase) return
     await supabase.auth.signOut()
     setUser(null)
+    window.location.href = '/'
   }, [])
 
   const userName = user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || null
