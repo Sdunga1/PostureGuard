@@ -75,9 +75,9 @@ export default async function LandingPage() {
                 </Link>
               </div>
               <div className="pl-1">
-                <a className="text-[#bac9cc] hover:text-[#c3f5ff] transition-colors font-headline text-xs uppercase tracking-widest" href="#workflow">
-                  or see how it works →
-                </a>
+                <Link href="/privacy" className="text-[#bac9cc] hover:text-[#c3f5ff] transition-colors font-headline text-xs uppercase tracking-widest">
+                  Review Privacy Protocol →
+                </Link>
               </div>
             </div>
           </div>
@@ -373,7 +373,7 @@ export default async function LandingPage() {
             © 2026 POSTUREGUARD. PRECISION BIOMETRICS.
           </div>
           <div className="flex space-x-8">
-            <a className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/40 hover:text-[#c3f5ff] transition-colors" href="#">Privacy Protocol</a>
+            <Link href="/privacy" className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/40 hover:text-[#c3f5ff] transition-colors">Privacy Protocol</Link>
             <a className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/40 hover:text-[#c3f5ff] transition-colors" href="#">Neural Terms</a>
             <a className="font-headline text-[10px] tracking-[0.05em] uppercase text-[#e5e2e1]/40 hover:text-[#c3f5ff] transition-colors" href="#">System Status</a>
           </div>
