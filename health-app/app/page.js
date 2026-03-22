@@ -356,16 +356,18 @@ function LandingScreen() {
 // Phase 1 → greeting fades out, quote appears alone, centred
 // Phase 2 → quote fades out, report card appears (clean – no name/quote above)
 function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn, onSignOut }) {
-  // Skip animation if workout just completed — jump straight to report card
-  const [phase, setPhase] = useState(workoutCompleted ? 2 : 0)
+  // Skip animation if coming from insights (?id= param) or workout just completed
+  const hasSessionInUrl = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('id')
+  const skipAnim = workoutCompleted || hasSessionInUrl
+  const [phase, setPhase] = useState(skipAnim ? 2 : 0)
   const [showDetails, setShowDetails] = useState(false)
 
   useEffect(() => {
-    if (workoutCompleted) return // Already at phase 2, no timers needed
+    if (skipAnim) return // Already at phase 2, no timers needed
     const t1 = setTimeout(() => setPhase(1), 2200)   // show greeting 2.2 s
     const t2 = setTimeout(() => setPhase(2), 4600)   // show quote 2.4 s, then card
     return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [workoutCompleted])
+  }, [skipAnim])
 
   // Each panel: absolutely positioned, stacked in the same space
   const panel = (p) => ({
@@ -441,11 +443,11 @@ function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn,
                       </div>
                     </div>
                     <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
-                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Head Tilt</span>
+                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Head Tilt <span className="normal-case opacity-50">(last 30s)</span></span>
                       <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">{sessionReport.metrics?.avgHeadTilt != null ? `${Math.round(sessionReport.metrics.avgHeadTilt)}°` : '--'}</span>
                     </div>
                     <div className="bg-vs-surface-mid/60 p-4 rounded-xl flex flex-col gap-1 border border-vs-outline-variant/5">
-                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Slouch Angle</span>
+                      <span className="font-label text-[10px] uppercase tracking-widest text-vs-on-surface-variant">Slouch Angle <span className="normal-case opacity-50">(last 30s)</span></span>
                       <span className="font-headline text-3xl font-bold text-vs-on-surface mt-1">{sessionReport.metrics?.avgSlouchAngle != null ? `${sessionReport.metrics.avgSlouchAngle.toFixed(1)}°` : '--'}</span>
                     </div>
                   </div>
@@ -679,7 +681,7 @@ function SessionScreen({ exercise, exerciseIndex, totalExercises, timeLeft, onPa
         </div>
 
         {/* Main Content Grid */}
-        <div className="relative w-full max-w-5xl grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 items-center">
+        <div className="relative w-full max-w-6xl grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 items-center">
           {/* Left: Timer + Target (desktop) */}
           <div className="hidden md:flex col-span-2 flex-col gap-8 items-center justify-center h-full">
             <div className="text-center">
@@ -696,7 +698,7 @@ function SessionScreen({ exercise, exerciseIndex, totalExercises, timeLeft, onPa
           </div>
 
           {/* Center: Exercise Image */}
-          <div className="col-span-1 md:col-span-8 relative rounded-2xl overflow-hidden synaptic-glow bg-vs-surface-mid border-t border-vs-primary/15" style={{ aspectRatio: '16/9' }}>
+          <div className="col-span-1 md:col-span-8 relative rounded-2xl overflow-hidden synaptic-glow bg-vs-surface-mid border-t border-vs-primary/15" style={{ aspectRatio: '4/3', minHeight: '360px' }}>
             <img
               src={exercise.image}
               alt={exercise.name}
@@ -873,7 +875,7 @@ function PausedScreen({ exercise, nextExercise, pausedSeconds, onResume, user, o
 }
 
 // ── Screen: COMPLETE ───────────────────────────────────────────────────────────
-function CompleteScreen({ sessionData, exercises = DEFAULT_EXERCISES, onReturn, userName, user, onSignOut }) {
+function CompleteScreen({ sessionData, exercises = DEFAULT_EXERCISES, onReturn, userName, user, onSignOut, isHistorical = false }) {
   const [phase, setPhase] = useState(0)
   // phase 0: quote only
   // phase 1: quote fades + session breakdown appears
@@ -984,18 +986,29 @@ function CompleteScreen({ sessionData, exercises = DEFAULT_EXERCISES, onReturn, 
             </div>
 
             <div className="border-t border-vs-outline-variant/10 pt-5 mt-4 flex flex-col gap-3">
-              <button
-                onClick={onReturn}
-                className="w-full font-body text-sm text-vs-primary hover:text-vs-on-surface transition-colors uppercase tracking-widest"
-              >
-                Return to Home
-              </button>
-              <a
-                href="/dashboard"
-                className="w-full font-body text-sm text-vs-on-surface-variant hover:text-vs-primary transition-colors uppercase tracking-widest text-center"
-              >
-                View All Sessions
-              </a>
+              {isHistorical ? (
+                <a
+                  href="/dashboard"
+                  className="w-full font-body text-sm text-vs-primary hover:text-vs-on-surface transition-colors uppercase tracking-widest text-center"
+                >
+                  Back to Insights
+                </a>
+              ) : (
+                <>
+                  <button
+                    onClick={onReturn}
+                    className="w-full font-body text-sm text-vs-primary hover:text-vs-on-surface transition-colors uppercase tracking-widest"
+                  >
+                    Return to Home
+                  </button>
+                  <a
+                    href="/dashboard"
+                    className="w-full font-body text-sm text-vs-on-surface-variant hover:text-vs-primary transition-colors uppercase tracking-widest text-center"
+                  >
+                    View All Sessions
+                  </a>
+                </>
+              )}
             </div>
           </div>
 
@@ -1073,7 +1086,10 @@ export default function App() {
           if (response.ok && data.session) {
             setSessionReport(data.session)
             setSessionError(null)
-            if (data.session.metrics?.workout_data) setWorkoutCompleted(true)
+            if (data.session.metrics?.workout_data) {
+              setWorkoutCompleted(true)
+              setScreen('complete') // Show completion screen directly for completed sessions
+            }
           } else if (data.ownerMismatch) {
             setSessionError('This session belongs to a different account. Please sign in with the account you used in the extension.')
           } else if (data.requiresAuth) {
@@ -1325,11 +1341,14 @@ export default function App() {
       {screen === 'complete' && (
         <CompleteScreen
           sessionData={sessionData}
-          exercises={exercises}
+          exercises={sessionReport?.metrics?.workout_data?.exercises?.length
+            ? sessionReport.metrics.workout_data.exercises
+            : exercises}
           onReturn={handleReturn}
           userName={userName}
           user={user}
           onSignOut={handleSignOut}
+          isHistorical={!!sessionReport?.metrics?.workout_data && pendingSessionId != null}
         />
       )}
     </>
