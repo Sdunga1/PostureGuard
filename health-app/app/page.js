@@ -18,8 +18,15 @@ export default async function LandingPage() {
       {/* ── NAV ──────────────────────────────────────────────────────── */}
       <nav className="fixed top-0 w-full z-50">
         <div className="flex justify-between items-center px-8 py-4 max-w-screen-2xl mx-auto bg-[#131313]/60 backdrop-blur-xl border-b border-white/5">
-          <div className="text-2xl font-bold tracking-tighter text-[#c3f5ff] font-headline uppercase">
-            PostureGuard
+          <div className="flex items-center gap-3">
+            <svg width="28" height="28" viewBox="0 0 56 56" fill="none">
+              <circle cx="28" cy="28" r="26" stroke="url(#navGrad)" strokeWidth="1.5" opacity="0.3"/>
+              <circle cx="28" cy="28" r="20" stroke="url(#navGrad)" strokeWidth="1.5" opacity="0.5"/>
+              <circle cx="28" cy="28" r="14" stroke="url(#navGrad)" strokeWidth="2"/>
+              <circle cx="28" cy="28" r="4" fill="#c3f5ff"/>
+              <defs><linearGradient id="navGrad" x1="0" y1="0" x2="56" y2="56"><stop offset="0%" stopColor="#c3f5ff"/><stop offset="100%" stopColor="#66d9cc"/></linearGradient></defs>
+            </svg>
+            <span className="text-2xl font-bold tracking-tighter text-[#c3f5ff] font-headline uppercase">PostureGuard</span>
           </div>
           <div className="hidden md:flex items-center space-x-12">
             <a className="font-headline tracking-tight uppercase text-xs font-bold text-[#c3f5ff] border-b-2 border-[#c3f5ff] pb-1" href="#home">Home</a>
