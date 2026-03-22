@@ -1126,7 +1126,7 @@
 
       if (response.ok) {
         const { id } = await response.json();
-        return getHealthAppUrl() + '/?id=' + id;
+        return getHealthAppUrl() + '/flow?id=' + id;
       }
     } catch (err) {
       console.warn('[PostureGuard] Session post failed:', err.message);
