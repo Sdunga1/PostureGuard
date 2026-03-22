@@ -82,20 +82,38 @@
       video.playsInline = true;
       document.body.appendChild(video);
 
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: CAMERA_WIDTH,
-          height: CAMERA_HEIGHT,
-          facingMode: 'user'
-        }
-      });
+      // Request camera with timeout (user has 10 seconds to respond)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Camera permission request timed out')), 10000)
+      );
+
+      stream = await Promise.race([
+        navigator.mediaDevices.getUserMedia({
+          video: {
+            width: CAMERA_WIDTH,
+            height: CAMERA_HEIGHT,
+            facingMode: 'user'
+          }
+        }),
+        timeoutPromise
+      ]);
 
       video.srcObject = stream;
       await video.play();
       console.log('[PostureGuard] Camera initialized (' + CAMERA_WIDTH + 'x' + CAMERA_HEIGHT + ')');
       return true;
     } catch (err) {
-      console.error('[PostureGuard] Camera init failed:', err.name, err.message);
+      const errName = err.name || 'UnknownError';
+      const errMsg = err.message || 'No error message';
+      console.error('[PostureGuard] Camera init failed:', errName, errMsg);
+
+      // Also send error to background for logging
+      chrome.runtime.sendMessage({
+        type: 'POSTURE_STATUS_UPDATE',
+        phase: 'camera-error',
+        note: 'Camera init failed: ' + errName + ' - ' + errMsg
+      }).catch(() => {});
+
       // Clean up on failure
       if (stream) {
         stream.getTracks().forEach(t => t.stop());
@@ -105,7 +123,7 @@
         video.parentNode.removeChild(video);
         video = null;
       }
-      dispatchStatus('error', 'Camera access denied: ' + (err.name || 'unknown error'));
+      dispatchStatus('error', 'Camera access denied: ' + errName);
       return false;
     }
   }
