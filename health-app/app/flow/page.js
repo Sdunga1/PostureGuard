@@ -344,7 +344,7 @@ function LandingScreen() {
 // Phase 0 → greeting alone, centred, full screen
 // Phase 1 → greeting fades out, quote appears alone, centred
 // Phase 2 → quote fades out, report card appears (clean – no name/quote above)
-function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn, onSignOut }) {
+function IntroScreen({ onStart, user, sessionReport, workoutCompleted, sessionLoaded, onSignIn, onSignOut }) {
   // Decide once at mount whether to skip — never recalculate on re-renders
   // Animation plays ONLY when: came from extension (?id= in URL, no from= param), once per session ID
   const [skipAnim] = useState(() => {
@@ -522,7 +522,11 @@ function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn,
               )}
 
               {/* CTA */}
-              {workoutCompleted && sessionReport ? (
+              {!sessionLoaded ? (
+                <div className="flex items-center justify-center py-5">
+                  <div className="w-5 h-5 rounded-full border-2 border-vs-primary border-t-transparent animate-spin" />
+                </div>
+              ) : workoutCompleted && sessionReport ? (
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-center gap-2 py-2">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5">
@@ -1014,7 +1018,13 @@ function CompleteScreen({ sessionData, exercises = DEFAULT_EXERCISES, onReturn, 
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
-  const [screen, setScreen] = useState('intro')
+  const [screen, setScreen] = useState(() => {
+    if (typeof window === 'undefined') return 'intro'
+    const params = new URLSearchParams(window.location.search)
+    // Coming from insights with a session ID — show loading until data arrives
+    if (params.has('id') && params.get('from') === 'insights') return 'loading'
+    return 'intro'
+  })
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
   const [timeLeft, setTimeLeft] = useState(DEFAULT_EXERCISES[0].duration)
   const [pausedSeconds, setPausedSeconds] = useState(0)
@@ -1027,6 +1037,7 @@ export default function App() {
   const [pendingSessionId, setPendingSessionId] = useState(null)
   const [workoutSaved, setWorkoutSaved] = useState(false)
   const [workoutCompleted, setWorkoutCompleted] = useState(false)
+  const [sessionLoaded, setSessionLoaded] = useState(false)
   const supabaseRef = useRef(null)
   const workoutStartTimeRef = useRef(null) // Set when session actually begins
 
@@ -1079,12 +1090,16 @@ export default function App() {
             setSessionError(null)
             if (data.session.metrics?.workout_data) {
               setWorkoutCompleted(true)
-              setScreen('complete') // Show completion screen directly for completed sessions
+              setScreen('complete')
+            } else if (screen === 'loading') {
+              setScreen('intro')
             }
           } else if (data.ownerMismatch) {
             setSessionError('This session belongs to a different account. Please sign in with the account you used in the extension.')
+            if (screen === 'loading') setScreen('intro')
           } else if (data.requiresAuth) {
             setSessionError('Please sign in to view this session.')
+            if (screen === 'loading') setScreen('intro')
           } else {
             setSessionError('Session not found.')
           }
@@ -1100,10 +1115,12 @@ export default function App() {
               if (sessions[0].metrics?.workout_data) setWorkoutCompleted(true)
             }
           }
+          setSessionLoaded(true)
         }
       } catch (err) {
         console.warn('Failed to load session:', err)
         if (pendingSessionId) setSessionError('Failed to load session data.')
+        setSessionLoaded(true)
       }
     }
 
@@ -1301,7 +1318,7 @@ export default function App() {
   return (
     <>
       {screen === 'intro' && (
-        <IntroScreen onStart={handleStart} user={user} sessionReport={sessionReport} workoutCompleted={workoutCompleted} onSignIn={handleSignIn} onSignOut={handleSignOut} />
+        <IntroScreen onStart={handleStart} user={user} sessionReport={sessionReport} workoutCompleted={workoutCompleted} sessionLoaded={sessionLoaded} onSignIn={handleSignIn} onSignOut={handleSignOut} />
       )}
       {screen === 'countdown' && (
         <CountdownScreen onComplete={handleCountdownComplete} />
