@@ -346,18 +346,22 @@ function LandingScreen() {
 // Phase 1 → greeting fades out, quote appears alone, centred
 // Phase 2 → quote fades out, report card appears (clean – no name/quote above)
 function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn, onSignOut }) {
-  // Skip animation if coming from insights (?id= param) or workout just completed
+  // Animation plays only once per day (tracked via sessionStorage date key)
   const hasSessionInUrl = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('id')
-  const skipAnim = workoutCompleted || hasSessionInUrl
+  const animKey = `pg_intro_shown_${new Date().toDateString()}`
+  const alreadyShownToday = typeof window !== 'undefined' && !!sessionStorage.getItem(animKey)
+  const skipAnim = workoutCompleted || hasSessionInUrl || alreadyShownToday
   const [phase, setPhase] = useState(skipAnim ? 2 : 0)
   const [showDetails, setShowDetails] = useState(false)
 
   useEffect(() => {
     if (skipAnim) return // Already at phase 2, no timers needed
+    // Mark as shown for today so navigating back doesn't replay it
+    sessionStorage.setItem(animKey, '1')
     const t1 = setTimeout(() => setPhase(1), 2200)   // show greeting 2.2 s
     const t2 = setTimeout(() => setPhase(2), 4600)   // show quote 2.4 s, then card
     return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [skipAnim])
+  }, [skipAnim, animKey])
 
   // Each panel: absolutely positioned, stacked in the same space
   const panel = (p) => ({
@@ -526,12 +530,6 @@ function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn,
                   >
                     View All Sessions
                   </a>
-                  <button
-                    onClick={onStart}
-                    className="w-full py-3 rounded-lg font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-primary transition-colors border border-vs-outline-variant/20 hover:border-vs-primary/30"
-                  >
-                    Start New Session
-                  </button>
                 </div>
               ) : (
                 <button
@@ -674,8 +672,7 @@ function SessionScreen({ exercise, exerciseIndex, totalExercises, timeLeft, onPa
             <img
               src={exercise.image}
               alt={exercise.name}
-              className="w-full h-full object-cover opacity-70 transition-opacity duration-700"
-              style={{ objectPosition: 'center top' }}
+              className="w-full h-full object-contain opacity-90 transition-opacity duration-700"
             />
             <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #050505 0%, transparent 60%)' }} />
             <div className="absolute bottom-4 left-4 flex items-center gap-3 glass-panel px-4 py-2 rounded-full border border-vs-outline-variant/20">
