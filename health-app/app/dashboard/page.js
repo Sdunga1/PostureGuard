@@ -214,9 +214,8 @@ function Header({ user, onSignOut }) {
         </div>
         <div className="flex items-center gap-6">
           <div className="hidden md:flex items-center gap-8">
-            <a href="/" className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Flow</a>
+            <a href="/flow" className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Flow</a>
             <span className="font-label text-xs uppercase tracking-widest text-vs-primary cursor-pointer">Insights</span>
-            <span className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Biometrics</span>
           </div>
           {user ? (
             <div className="flex items-center gap-3">
