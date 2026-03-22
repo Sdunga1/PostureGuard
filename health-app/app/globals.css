@@ -147,3 +147,39 @@
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: #0d1117; }
 ::-webkit-scrollbar-thumb { background: #333840; border-radius: 4px; }
+
+/* ── Landing Page helpers ───────────────────────────────── */
+.scanline-bg {
+  background:
+    linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.15) 50%),
+    linear-gradient(90deg, rgba(255,0,0,0.01), rgba(0,255,0,0.005), rgba(0,255,0,0.01));
+  background-size: 100% 2px, 3px 100%;
+}
+
+.hud-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 1px,
+    rgba(195,245,255,0.03) 1px,
+    rgba(195,245,255,0.03) 2px
+  );
+}
+
+@keyframes fadeInVertebra {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.vertebra-anim {
+  animation: fadeInVertebra 0.5s ease-out forwards;
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}

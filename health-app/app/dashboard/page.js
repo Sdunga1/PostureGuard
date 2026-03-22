@@ -131,7 +131,7 @@ export default function Dashboard() {
             {sessions.map((s, i) => (
               <a
                 key={s.id}
-                href={`/?id=${s.id}&from=insights`}
+                href={`/flow?id=${s.id}&from=insights`}
                 className="glass-card rounded-2xl p-6 border border-vs-outline-variant/10 hover:border-vs-primary/30 transition-all cursor-pointer block"
               >
                 <div className="flex justify-between items-start mb-4">
@@ -214,9 +214,8 @@ function Header({ user, onSignOut }) {
         </div>
         <div className="flex items-center gap-6">
           <div className="hidden md:flex items-center gap-8">
-            <a href="/" className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Flow</a>
+            <a href="/flow" className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Flow</a>
             <span className="font-label text-xs uppercase tracking-widest text-vs-primary cursor-pointer">Insights</span>
-            <span className="font-label text-xs uppercase tracking-widest text-vs-on-surface-variant hover:text-vs-on-surface cursor-pointer transition-colors">Biometrics</span>
           </div>
           {user ? (
             <div className="flex items-center gap-3">
