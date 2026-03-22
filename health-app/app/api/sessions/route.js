@@ -11,12 +11,16 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const url = new URL(request.url);
+  const limitParam = parseInt(url.searchParams.get('limit'), 10);
+  const queryLimit = (limitParam > 0 && limitParam <= 100) ? limitParam : 20;
+
   const { data, error } = await supabase
     .from('sessions')
     .select('*')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
-    .limit(20);
+    .limit(queryLimit);
 
   if (error) {
     return NextResponse.json({ error: 'Failed to fetch sessions' }, { status: 500 });

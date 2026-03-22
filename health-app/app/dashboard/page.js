@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createBrowserClient } from '@/lib/supabase'
+import SessionScoreChart from '@/components/SessionScoreChart'
 
 function formatDate(dateStr) {
   const d = new Date(dateStr)
@@ -26,18 +27,21 @@ export default function Dashboard() {
   const [user, setUser] = useState(null)
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
+  const [accessToken, setAccessToken] = useState(null)
   const supabaseRef = useRef(null)
 
   useEffect(() => {
     const supabase = createBrowserClient()
     supabaseRef.current = supabase
 
-    supabase.auth.getUser().then(({ data: { user: u } }) => {
-      setUser(u)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user || null)
+      setAccessToken(session?.access_token || null)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user || null)
+      setAccessToken(session?.access_token || null)
     })
 
     return () => subscription.unsubscribe()
@@ -110,6 +114,9 @@ export default function Dashboard() {
               : 'No sessions recorded yet'}
           </p>
         </div>
+
+        {/* Posture Score Trend Chart */}
+        {user && <SessionScoreChart accessToken={accessToken} />}
 
         {loading ? (
           <div className="flex justify-center py-20">
