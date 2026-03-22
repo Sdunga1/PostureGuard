@@ -538,7 +538,7 @@ function IntroScreen({ onStart, user, sessionReport, workoutCompleted, sessionLo
                     href="/dashboard"
                     className="vs-btn-primary w-full py-5 rounded-lg text-vs-bg font-headline font-bold uppercase tracking-widest text-sm text-center block"
                   >
-                    View All Sessions
+                    {cameFromInsights ? 'Back to Insights' : 'View All Sessions'}
                   </a>
                 </div>
               ) : cameFromInsights ? (
@@ -1090,7 +1090,13 @@ export default function App() {
             setSessionError(null)
             if (data.session.metrics?.workout_data) {
               setWorkoutCompleted(true)
-              setScreen('complete')
+              // From insights: show report card, not complete screen
+              const params = new URLSearchParams(window.location.search)
+              if (params.get('from') === 'insights') {
+                setScreen('intro')
+              } else {
+                setScreen('complete')
+              }
             } else if (screen === 'loading') {
               setScreen('intro')
             }
