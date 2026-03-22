@@ -413,6 +413,13 @@
   if (els.postureToggle) {
     els.postureToggle.addEventListener('change', async (e) => {
       const enabled = e.target.checked;
+
+      if (enabled && els.durationSelect) {
+        // Explicitly save current dropdown value before enabling — prevents race
+        // where postureEnabled resolves before sessionDurationMs in background
+        await saveSetting('sessionDurationMs', parseInt(els.durationSelect.value, 10));
+      }
+
       await saveSetting('postureEnabled', enabled);
 
       if (!enabled) {
