@@ -354,8 +354,8 @@ function IntroScreen({ onStart, user, sessionReport, workoutCompleted, sessionLo
     const fromInsights = params.get('from') === 'insights'
     if (!hasId || fromInsights) return true // not from extension — skip
     const key = `pg_intro_shown_${params.get('id')}`
-    if (sessionStorage.getItem(key)) return true // already played for this session
-    sessionStorage.setItem(key, '1')
+    if (localStorage.getItem(key)) return true // already played for this session
+    localStorage.setItem(key, '1')
     return false
   })
   const cameFromInsights = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('from') === 'insights'
@@ -1021,8 +1021,8 @@ export default function App() {
   const [screen, setScreen] = useState(() => {
     if (typeof window === 'undefined') return 'intro'
     const params = new URLSearchParams(window.location.search)
-    // Coming from insights with a session ID — show loading until data arrives
-    if (params.has('id') && params.get('from') === 'insights') return 'loading'
+    // Has a session ID — show loading until data arrives
+    if (params.has('id')) return 'loading'
     return 'intro'
   })
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
@@ -1094,14 +1094,18 @@ export default function App() {
             } else if (screen === 'loading') {
               setScreen('intro')
             }
+            setSessionLoaded(true)
           } else if (data.ownerMismatch) {
             setSessionError('This session belongs to a different account. Please sign in with the account you used in the extension.')
             if (screen === 'loading') setScreen('intro')
+            setSessionLoaded(true)
           } else if (data.requiresAuth) {
             setSessionError('Please sign in to view this session.')
             if (screen === 'loading') setScreen('intro')
+            setSessionLoaded(true)
           } else {
             setSessionError('Session not found.')
+            setSessionLoaded(true)
           }
         } else {
           // No specific session — load the most recent one
@@ -1276,9 +1280,14 @@ export default function App() {
 
   // ── Render ──
 
-  // Show landing page if not authenticated
+  // Redirect unauthenticated users to the main landing page
   if (!user) {
-    return <LandingScreen />
+    if (typeof window !== 'undefined') window.location.href = '/'
+    return (
+      <div className="bg-vs-bg min-h-screen flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full border-2 border-vs-primary border-t-transparent animate-spin" />
+      </div>
+    )
   }
 
   // Show loading while verifying session ownership
