@@ -346,11 +346,16 @@ function LandingScreen() {
 // Phase 2 → quote fades out, report card appears (clean – no name/quote above)
 function IntroScreen({ onStart, user, sessionReport, workoutCompleted, onSignIn, onSignOut }) {
   // Decide once at mount whether to skip — never recalculate on re-renders
-  // Animation plays when: came from extension (?id= in URL)
+  // Animation plays ONLY when: came from extension (?id= in URL, no from= param), once per session ID
   const [skipAnim] = useState(() => {
     if (typeof window === 'undefined') return true
-    const hasId = new URLSearchParams(window.location.search).has('id')
-    if (!hasId) return true // navigating within app — skip
+    const params = new URLSearchParams(window.location.search)
+    const hasId = params.has('id')
+    const fromInsights = params.get('from') === 'insights'
+    if (!hasId || fromInsights) return true // not from extension — skip
+    const key = `pg_intro_shown_${params.get('id')}`
+    if (sessionStorage.getItem(key)) return true // already played for this session
+    sessionStorage.setItem(key, '1')
     return false
   })
   const cameFromInsights = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('from') === 'insights'
