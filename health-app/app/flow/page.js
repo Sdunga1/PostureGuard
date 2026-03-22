@@ -1112,7 +1112,9 @@ export default function App() {
             const { sessions } = await response.json()
             if (sessions && sessions.length > 0) {
               setSessionReport(sessions[0])
-              if (sessions[0].metrics?.workout_data) setWorkoutCompleted(true)
+              if (sessions[0].metrics?.workout_data) {
+                setWorkoutCompleted(true)
+              }
             }
           }
           setSessionLoaded(true)
@@ -1317,6 +1319,14 @@ export default function App() {
 
   return (
     <>
+      {screen === 'loading' && (
+        <div className="bg-vs-bg min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-vs-primary border-t-transparent animate-spin" />
+            <p className="text-sm text-vs-on-surface-variant">Loading your session...</p>
+          </div>
+        </div>
+      )}
       {screen === 'intro' && (
         <IntroScreen onStart={handleStart} user={user} sessionReport={sessionReport} workoutCompleted={workoutCompleted} sessionLoaded={sessionLoaded} onSignIn={handleSignIn} onSignOut={handleSignOut} />
       )}
