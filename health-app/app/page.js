@@ -22,8 +22,11 @@ export default async function LandingPage() {
             PostureGuard
           </div>
           <div className="hidden md:flex items-center space-x-12">
-            <Link className="font-headline tracking-tight uppercase text-xs font-bold text-[#c3f5ff] border-b-2 border-[#c3f5ff] pb-1" href="/flow">Flow</Link>
-            <Link className="font-headline tracking-tight uppercase text-xs font-bold text-[#e5e2e1]/70 hover:text-[#c3f5ff] transition-colors" href="/dashboard">Insights</Link>
+            <a className="font-headline tracking-tight uppercase text-xs font-bold text-[#c3f5ff] border-b-2 border-[#c3f5ff] pb-1" href="#home">Home</a>
+            <a className="font-headline tracking-tight uppercase text-xs font-bold text-[#e5e2e1]/70 hover:text-[#c3f5ff] transition-colors" href="#stats">Stats</a>
+            <a className="font-headline tracking-tight uppercase text-xs font-bold text-[#e5e2e1]/70 hover:text-[#c3f5ff] transition-colors" href="#workflow">Workflow</a>
+            <a className="font-headline tracking-tight uppercase text-xs font-bold text-[#e5e2e1]/70 hover:text-[#c3f5ff] transition-colors" href="#core">Core</a>
+            <a className="font-headline tracking-tight uppercase text-xs font-bold text-[#e5e2e1]/70 hover:text-[#c3f5ff] transition-colors" href="#blogs">Blogs</a>
           </div>
           <Link href="/login">
             <button className="bg-[#c3f5ff] text-[#00363d] px-6 py-2 rounded-full font-headline text-xs font-bold uppercase tracking-widest hover:bg-[#00daf3] transition-all active:scale-95 shadow-[0_0_20px_rgba(195,245,255,0.2)]">
@@ -39,7 +42,7 @@ export default async function LandingPage() {
         <div className="absolute inset-0 pointer-events-none hud-scanlines opacity-50" />
 
         {/* ── HERO ── */}
-        <section className="max-w-screen-2xl mx-auto px-8 md:px-16 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10 py-12 lg:pt-16 lg:pb-8">
+        <section id="home" className="max-w-screen-2xl mx-auto px-8 md:px-16 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10 py-12 lg:pt-16 lg:pb-8">
 
           {/* Left: Content */}
           <div className="lg:col-span-6 z-10">
@@ -167,7 +170,7 @@ export default async function LandingPage() {
         </section>
 
         {/* ── STATS STRIP ── */}
-        <section className="max-w-screen-2xl mx-auto px-8 md:px-16 py-16 border-y border-white/5 bg-[#0e0e0e]/30">
+        <section id="stats" className="max-w-screen-2xl mx-auto px-8 md:px-16 py-16 border-y border-white/5 bg-[#0e0e0e]/30">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
             <div>
               <h4 className="font-headline text-4xl font-bold text-[#c3f5ff] mb-2">65%</h4>
@@ -207,7 +210,7 @@ export default async function LandingPage() {
         </section>
 
         {/* ── CORE PROTOCOLS ── */}
-        <section className="max-w-screen-2xl mx-auto px-8 md:px-16 pb-32">
+        <section id="core" className="max-w-screen-2xl mx-auto px-8 md:px-16 pb-32">
           <div className="text-center mb-16">
             <h2 className="font-headline text-xs uppercase tracking-[0.4em] text-[#c3f5ff]/60 font-bold mb-4">Core Protocols</h2>
             <div className="w-12 h-px bg-[#c3f5ff]/30 mx-auto" />
@@ -274,6 +277,28 @@ export default async function LandingPage() {
                 <Link href="/login" className="text-[#c3f5ff] font-headline text-[10px] uppercase tracking-widest hover:underline underline-offset-4">Load Session →</Link>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* ── BLOGS ── */}
+        <section id="blogs" className="max-w-screen-2xl mx-auto px-8 md:px-16 pb-32">
+          <div className="text-center mb-16">
+            <h2 className="font-headline text-xs uppercase tracking-[0.4em] text-[#c3f5ff]/60 font-bold mb-4">From the Blog</h2>
+            <div className="w-12 h-px bg-[#c3f5ff]/30 mx-auto" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Link href="/blog/1" className="group relative bg-[#1c1b1b] p-8 border border-white/5 transition-all hover:border-[#c3f5ff]/30 hover:bg-[#2a2a2a] cursor-pointer block">
+              <div className="font-headline text-[10px] uppercase tracking-[0.2em] text-[#c3f5ff]/50 mb-4">March 2026 · 4 min read</div>
+              <h3 className="font-headline text-xl font-bold text-[#e5e2e1] mb-3 uppercase tracking-tight group-hover:text-[#c3f5ff] transition-colors">Why Your Posture Gets Worse After Lunch</h3>
+              <p className="font-body text-[#bac9cc] text-sm font-light leading-relaxed">Most people notice it around 2pm. The slouch creeps in, the neck drifts forward, and the shoulders round.</p>
+              <div className="mt-6 font-headline text-[10px] uppercase tracking-widest text-[#c3f5ff] opacity-0 group-hover:opacity-100 transition-opacity">Read Article →</div>
+            </Link>
+            <Link href="/blog/2" className="group relative bg-[#1c1b1b] p-8 border border-white/5 transition-all hover:border-[#c3f5ff]/30 hover:bg-[#2a2a2a] cursor-pointer block">
+              <div className="font-headline text-[10px] uppercase tracking-[0.2em] text-[#c3f5ff]/50 mb-4">March 2026 · 6 min read</div>
+              <h3 className="font-headline text-xl font-bold text-[#e5e2e1] mb-3 uppercase tracking-tight group-hover:text-[#c3f5ff] transition-colors">The Science Behind Posture Scoring</h3>
+              <p className="font-body text-[#bac9cc] text-sm font-light leading-relaxed">Generic posture standards don&apos;t account for individual variation. PostureGuard takes a different approach.</p>
+              <div className="mt-6 font-headline text-[10px] uppercase tracking-widest text-[#c3f5ff] opacity-0 group-hover:opacity-100 transition-opacity">Read Article →</div>
+            </Link>
           </div>
         </section>
 
