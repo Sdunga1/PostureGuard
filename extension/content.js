@@ -42,10 +42,21 @@
         break;
 
       case 'POSTURE_ENABLED_CHANGED':
+        console.log('[PostureGuard] Toggle monitoring:', message.enabled ? 'ON' : 'OFF');
+        // Dispatch toggle event — PostureCore handles start() and stop()
         window.dispatchEvent(new CustomEvent('posture:toggle', {
           detail: { enabled: message.enabled }
         }));
-        sendResponse({ ok: true });
+
+        if (!message.enabled) {
+          // Give camera time to fully release before responding
+          setTimeout(() => {
+            sendResponse({ ok: true });
+          }, 200);
+          return true; // Indicate we'll send response asynchronously
+        } else {
+          sendResponse({ ok: true });
+        }
         break;
 
       case 'POSTURE_SCORE_UPDATE':

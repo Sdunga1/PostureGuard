@@ -293,10 +293,11 @@
       try {
         const response = await chrome.runtime.sendMessage({ type: 'SHOULD_START_CAMERA' });
         if (response && response.start) {
-          start();
+          // Small delay to ensure state is fully reset before starting
+          setTimeout(() => start(), 100);
         }
       } catch (_e) {
-        start();
+        setTimeout(() => start(), 100);
       }
     } else {
       stop();
