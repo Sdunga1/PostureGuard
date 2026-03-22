@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Postureguard_Logo.png" alt="PostureGuard Logo" width="400" />
+</p>
+
 # PostureGuard
 
 **Real-time posture detection and AI-powered recovery coaching — right in your browser.**
@@ -42,6 +46,10 @@ All camera processing happens **locally in your browser** via WebGL. Only numeri
 ---
 
 ## How It Works
+
+<p align="center">
+  <img src="PostureGuard_architecture.jpeg" alt="PostureGuard Architecture" width="800" />
+</p>
 
 ```mermaid
 flowchart LR
